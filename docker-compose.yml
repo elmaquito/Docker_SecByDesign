@@ -149,6 +149,8 @@ networks:
 
 # =================================================================
 # Définition des secrets
+# Note: Copiez secrets/db_password.txt.example vers secrets/db_password.txt
+#       avant de lancer docker compose up
 # =================================================================
 secrets:
   db_password:

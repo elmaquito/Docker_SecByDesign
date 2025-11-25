@@ -40,13 +40,13 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             try:
                 with open('/sys/fs/cgroup/memory.max', 'r') as f:
                     memory_limit = f.read().strip()
-            except Exception:
+            except (FileNotFoundError, PermissionError, OSError):
                 memory_limit = "Non défini"
             
             try:
                 with open('/sys/fs/cgroup/cpu.max', 'r') as f:
                     cpu_limit = f.read().strip()
-            except Exception:
+            except (FileNotFoundError, PermissionError, OSError):
                 cpu_limit = "Non défini"
             
             html = f"""
