@@ -1,0 +1,17 @@
+# Exemple: Isolation réseau - Service API Backend
+# Ce service a accès aux réseaux frontend et backend
+
+FROM python:3.11-slim
+
+RUN groupadd --gid 1000 appgroup && \
+    useradd --uid 1000 --gid appgroup --shell /bin/bash --create-home appuser
+
+WORKDIR /app
+
+COPY --chown=appuser:appgroup api.py .
+
+USER appuser
+
+EXPOSE 8081
+
+CMD ["python", "api.py"]
