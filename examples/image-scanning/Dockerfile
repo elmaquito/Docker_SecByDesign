@@ -1,7 +1,9 @@
 # Exemple: Analyse d'Images (Image Scanning)
 # Utilisation de Trivy pour détecter les vulnérabilités
 
-# Image volontairement avec des vulnérabilités connues pour la démo
+# ⚠️ INTENTIONNELLEMENT: Image Python 3.8 (ancienne version)
+# Cette version est utilisée pour démontrer la détection de vulnérabilités
+# En production, utilisez toujours la dernière version stable (ex: python:3.11-slim)
 FROM python:3.8-slim
 
 RUN groupadd --gid 1000 appgroup && \
