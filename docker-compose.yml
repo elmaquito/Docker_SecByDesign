@@ -132,6 +132,54 @@ services:
     networks:
       - demo-network
 
+  # =================================================================
+  # Cas 6: Analyse d'Images (Image Scanning)
+  # Démonstration avec une image pouvant contenir des vulnérabilités
+  # =================================================================
+  image-scanning-demo:
+    build:
+      context: ./examples/image-scanning
+      dockerfile: Dockerfile
+    container_name: security-image-scanning
+    ports:
+      - "8085:8080"
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    networks:
+      - demo-network
+
+  # =================================================================
+  # Cas 7: Filesystem Read-Only avec tmpfs
+  # Démonstration d'un conteneur avec système de fichiers en lecture seule
+  # =================================================================
+  readonly-demo:
+    build:
+      context: ./examples/readonly-filesystem
+      dockerfile: Dockerfile
+    container_name: security-readonly
+    ports:
+      - "8086:8080"
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=64m
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    networks:
+      - demo-network
+
+  # =================================================================
+  # Cas 8: Image Distroless
+  # Image ultra-minimale sans shell ni outils
+  # =================================================================
+  # Note: Pour tester l'image distroless, exécutez:
+  # cd examples/distroless && docker build -t distroless-demo .
+  # docker run -d -p 8087:8080 distroless-demo
+
 # =================================================================
 # Définition des réseaux
 # =================================================================

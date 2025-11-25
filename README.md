@@ -28,6 +28,23 @@ docker compose up -d
 docker compose ps
 ```
 
+## 📚 Travaux Pratiques (TPs)
+
+Le dossier **[TP/](./TP/)** contient des guides étape par étape pour chaque concept de sécurité :
+
+| TP | Titre | Durée | Difficulté |
+|----|-------|-------|------------|
+| [TP1](./TP/TP1-non-root-user.md) | Utilisateur Non-Root | 30 min | ⭐ Débutant |
+| [TP2](./TP/TP2-multi-stage-build.md) | Multi-Stage Build | 45 min | ⭐⭐ Intermédiaire |
+| [TP3](./TP/TP3-network-isolation.md) | Isolation Réseau | 45 min | ⭐⭐ Intermédiaire |
+| [TP4](./TP/TP4-secrets-management.md) | Gestion des Secrets | 30 min | ⭐ Débutant |
+| [TP5](./TP/TP5-resource-limits.md) | Limites de Ressources | 30 min | ⭐ Débutant |
+| [TP6](./TP/TP6-image-scanning.md) | Analyse d'Images | 45 min | ⭐⭐ Intermédiaire |
+| [TP7](./TP/TP7-readonly-filesystem.md) | Filesystem Read-Only | 30 min | ⭐ Débutant |
+| [TP8](./TP/TP8-distroless.md) | Images Distroless | 45 min | ⭐⭐⭐ Avancé |
+
+➡️ **Commencez par** : [TP/README.md](./TP/README.md)
+
 ## 📚 Cas Pratiques
 
 ### 1. Utilisateur Non-Root (Port 8081)
@@ -145,6 +162,67 @@ docker stats security-resource-limits --no-stream
 
 ---
 
+### 6. Analyse d'Images (Port 8085)
+
+**Principe:** Scanner les images pour détecter les vulnérabilités avant déploiement.
+
+```bash
+# Accéder à la démo
+curl http://localhost:8085
+
+# Scanner l'image avec Trivy
+trivy image security-image-scanning
+```
+
+**Bonnes pratiques appliquées:**
+- ✅ Analyse des CVE connues
+- ✅ Intégration dans le pipeline CI/CD
+- ✅ Utilisation d'images à jour
+
+---
+
+### 7. Filesystem Read-Only (Port 8086)
+
+**Principe:** Empêcher la modification des fichiers dans le conteneur.
+
+```bash
+# Accéder à la démo
+curl http://localhost:8086
+
+# Tester l'écriture (devrait échouer sauf dans /tmp)
+docker exec security-readonly touch /app/test
+```
+
+**Bonnes pratiques appliquées:**
+- ✅ Filesystem en lecture seule
+- ✅ tmpfs pour les répertoires temporaires
+- ✅ Options noexec et nosuid
+
+---
+
+### 8. Images Distroless
+
+**Principe:** Utiliser des images minimales sans shell ni outils système.
+
+```bash
+# Construire l'image distroless
+cd examples/distroless
+docker build -t distroless-demo .
+
+# Lancer le conteneur
+docker run -d -p 8087:8080 distroless-demo
+
+# Tenter d'accéder au shell (devrait échouer)
+docker exec -it <container_id> /bin/sh
+```
+
+**Bonnes pratiques appliquées:**
+- ✅ Image sans shell
+- ✅ Surface d'attaque minimale
+- ✅ Moins de vulnérabilités potentielles
+
+---
+
 ## 🔒 Mesures de Sécurité Communes
 
 Tous les conteneurs appliquent:
@@ -163,6 +241,16 @@ Docker_SecByDesign/
 ├── docker-compose.yml          # Orchestration principale
 ├── secrets/                    # Fichiers de secrets (exemple)
 │   └── db_password.txt.example
+├── TP/                         # Travaux Pratiques étape par étape
+│   ├── README.md
+│   ├── TP1-non-root-user.md
+│   ├── TP2-multi-stage-build.md
+│   ├── TP3-network-isolation.md
+│   ├── TP4-secrets-management.md
+│   ├── TP5-resource-limits.md
+│   ├── TP6-image-scanning.md
+│   ├── TP7-readonly-filesystem.md
+│   └── TP8-distroless.md
 ├── examples/
 │   ├── non-root-user/         # Cas 1: Utilisateur non-root
 │   │   ├── Dockerfile
@@ -180,9 +268,19 @@ Docker_SecByDesign/
 │   ├── secrets-management/    # Cas 4: Gestion des secrets
 │   │   ├── Dockerfile
 │   │   └── app.py
-│   └── resource-limits/       # Cas 5: Limites de ressources
+│   ├── resource-limits/       # Cas 5: Limites de ressources
+│   │   ├── Dockerfile
+│   │   └── app.py
+│   ├── image-scanning/        # Cas 6: Analyse d'images
+│   │   ├── Dockerfile
+│   │   └── app.py
+│   ├── readonly-filesystem/   # Cas 7: Filesystem read-only
+│   │   ├── Dockerfile
+│   │   └── app.py
+│   └── distroless/            # Cas 8: Images distroless
 │       ├── Dockerfile
-│       └── app.py
+│       ├── server.js
+│       └── package.json
 └── README.md
 ```
 

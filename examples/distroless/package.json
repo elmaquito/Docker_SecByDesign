@@ -1,0 +1,9 @@
+{
+  "name": "distroless-demo",
+  "version": "1.0.0",
+  "description": "Demo for distroless container security",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  }
+}
