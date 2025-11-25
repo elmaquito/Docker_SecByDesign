@@ -1,0 +1,30 @@
+# Ignorer les vrais fichiers de secrets
+secrets/*.txt
+!secrets/*.example
+
+# Fichiers temporaires
+*.tmp
+*.log
+
+# Fichiers IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Fichiers système
+.DS_Store
+Thumbs.db
+
+# Fichiers Python
+__pycache__/
+*.py[cod]
+*$py.class
+.Python
+*.so
+
+# Fichiers Go
+*.exe
+*.exe~
+*.dll
+*.dylib

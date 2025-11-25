@@ -1,0 +1,17 @@
+# Exemple: Isolation réseau - Service Web Frontend
+# Ce service n'a accès qu'au réseau frontend
+
+FROM python:3.11-slim
+
+RUN groupadd --gid 1000 appgroup && \
+    useradd --uid 1000 --gid appgroup --shell /bin/bash --create-home appuser
+
+WORKDIR /app
+
+COPY --chown=appuser:appgroup web.py .
+
+USER appuser
+
+EXPOSE 8080
+
+CMD ["python", "web.py"]

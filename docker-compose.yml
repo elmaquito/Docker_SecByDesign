@@ -1,0 +1,155 @@
+# Docker Compose - Environnement de test pour la Sécurité par Design
+# Ce fichier orchestre les différents cas pratiques de sécurité
+
+services:
+  # =================================================================
+  # Cas 1: Utilisateur Non-Root
+  # Démontre l'exécution de conteneurs avec des privilèges réduits
+  # =================================================================
+  non-root-demo:
+    build:
+      context: ./examples/non-root-user
+      dockerfile: Dockerfile
+    container_name: security-non-root
+    ports:
+      - "8081:8080"
+    # Sécurité: Read-only filesystem
+    read_only: true
+    # Sécurité: Pas de nouveaux privilèges
+    security_opt:
+      - no-new-privileges:true
+    # Sécurité: Capabilities réduites
+    cap_drop:
+      - ALL
+    networks:
+      - demo-network
+
+  # =================================================================
+  # Cas 2: Multi-Stage Build (build séparé requis pour Go)
+  # Image minimale avec surface d'attaque réduite
+  # =================================================================
+  # Note: Pour tester le multi-stage build, exécutez:
+  # cd examples/multi-stage-build && docker build -t multi-stage-demo .
+
+  # =================================================================
+  # Cas 3: Isolation Réseau
+  # Séparation des services par réseaux distincts
+  # =================================================================
+  network-web:
+    build:
+      context: ./examples/network-isolation
+      dockerfile: Dockerfile.web
+    container_name: security-network-web
+    ports:
+      - "8082:8080"
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    networks:
+      - frontend-network  # Accès uniquement au frontend
+    depends_on:
+      - network-api
+
+  network-api:
+    build:
+      context: ./examples/network-isolation
+      dockerfile: Dockerfile.api
+    container_name: security-network-api
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    networks:
+      - frontend-network  # Pont entre frontend et backend
+      - backend-network
+    depends_on:
+      - network-db
+
+  network-db:
+    build:
+      context: ./examples/network-isolation
+      dockerfile: Dockerfile.db
+    container_name: security-network-db
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    networks:
+      - backend-network   # Isolé - uniquement backend
+
+  # =================================================================
+  # Cas 4: Gestion des Secrets
+  # Utilisation sécurisée des données sensibles
+  # =================================================================
+  secrets-demo:
+    build:
+      context: ./examples/secrets-management
+      dockerfile: Dockerfile
+    container_name: security-secrets
+    ports:
+      - "8083:8080"
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    secrets:
+      - db_password
+    networks:
+      - demo-network
+
+  # =================================================================
+  # Cas 5: Limites de Ressources et Health Checks
+  # Protection contre les attaques DoS
+  # =================================================================
+  resource-limits-demo:
+    build:
+      context: ./examples/resource-limits
+      dockerfile: Dockerfile
+    container_name: security-resource-limits
+    ports:
+      - "8084:8080"
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    # Limites de ressources
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'        # Maximum 50% d'un CPU
+          memory: 128M       # Maximum 128 Mo de RAM
+        reservations:
+          cpus: '0.1'
+          memory: 64M
+    # Politique de redémarrage
+    restart: unless-stopped
+    networks:
+      - demo-network
+
+# =================================================================
+# Définition des réseaux
+# =================================================================
+networks:
+  demo-network:
+    driver: bridge
+    
+  frontend-network:
+    driver: bridge
+    # Réseau pour les services exposés
+    
+  backend-network:
+    driver: bridge
+    internal: true  # Pas d'accès à l'extérieur
+
+# =================================================================
+# Définition des secrets
+# =================================================================
+secrets:
+  db_password:
+    file: ./secrets/db_password.txt
