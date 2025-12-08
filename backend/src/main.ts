@@ -39,12 +39,6 @@ const noteSchema = z.object({
 // --- App Setup ---
 const app = express();
 
-// Logging Middleware
-app.use((req, res, next) => {
-  console.log(`[${new Date().toISOString()}] ${req.method} ${req.url} - Origin: ${req.headers.origin}`);
-  next();
-});
-
 app.use(helmet({
   crossOriginResourcePolicy: { policy: "cross-origin" },
 }));

@@ -6,13 +6,7 @@
     </header>
 
     <main>
-      <div v-if="errorMsg" style="color: red; background: white; padding: 10px; margin-bottom: 10px; border: 1px solid red;">
-        Debug Error: {{ errorMsg }}
-      </div>
-
-      <div v-if="loading" class="loading">
-        Loading authentication status... (Check console if stuck)
-      </div>
+      <div v-if="loading" class="loading">Loading...</div>
       
       <div v-else-if="!user">
         <Login @login-success="handleLogin" />
@@ -32,23 +26,14 @@ import Dashboard from './components/Dashboard.vue'
 
 const user = ref(null)
 const loading = ref(true)
-const errorMsg = ref('')
 
 // Check if user is already logged in (via cookie)
 const checkAuth = async () => {
-  console.log('Checking auth...')
   try {
-    // Add a timeout to prevent infinite loading
-    const controller = new AbortController()
-    const timeoutId = setTimeout(() => controller.abort(), 2000) // 2 second timeout
-
     const res = await fetch('http://localhost:3000/notes', { 
-      credentials: 'include',
-      signal: controller.signal
+      credentials: 'include'
     })
-    clearTimeout(timeoutId)
 
-    console.log('Auth response:', res.status)
     if (res.ok) {
       const storedUser = localStorage.getItem('user')
       if (storedUser) {
@@ -57,7 +42,6 @@ const checkAuth = async () => {
     }
   } catch (e) {
     console.error('Auth check failed:', e)
-    errorMsg.value = e.message
   } finally {
     loading.value = false
   }
