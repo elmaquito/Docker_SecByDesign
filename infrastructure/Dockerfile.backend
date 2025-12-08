@@ -1,0 +1,50 @@
+# syntax=docker/dockerfile:1
+
+# --- Stage 1: Builder ---
+FROM node:18-alpine AS builder
+
+WORKDIR /app
+
+# Install build tools for native modules (argon2)
+RUN apk add --no-cache python3 make g++
+
+# Copy package files first for caching
+COPY package*.json ./
+
+# Install dependencies (using npm install for initial bootstrap as no lockfile exists yet)
+# In production with lockfile, use: RUN npm ci --ignore-scripts
+RUN npm install --build-from-source=argon2
+
+# Copy source code
+COPY . .
+
+# Build the application (TypeScript -> JS)
+RUN npm run build
+
+# --- Stage 2: Runner (Secure Production Image) ---
+# Use Distroless for minimal attack surface (no shell, no package manager)
+# Or Alpine if debugging is strictly necessary (but Distroless is safer)
+FROM gcr.io/distroless/nodejs18-debian11 AS runner
+
+WORKDIR /app
+
+# Set production environment
+ENV NODE_ENV=production
+
+# Copy built artifacts from builder
+COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/package*.json ./
+COPY --from=builder /app/node_modules ./node_modules
+
+# Run as non-root user (Distroless has a 'nonroot' user with ID 65532)
+USER 65532:65532
+
+# Healthcheck is tricky in Distroless (no curl/wget). 
+# Option 1: Use a small go healthcheck binary copied in.
+# Option 2: Use built-in node script.
+# Here we assume a simple node script check.js exists or we rely on orchestrator checks.
+# HEALTHCHECK --interval=30s --timeout=3s CMD ["/nodejs/bin/node", "healthcheck.js"]
+
+EXPOSE 3000
+
+CMD ["dist/main.js"]

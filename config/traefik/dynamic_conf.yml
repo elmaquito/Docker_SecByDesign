@@ -1,0 +1,33 @@
+# Dynamic Configuration
+http:
+  middlewares:
+    rate-limit:
+      rateLimit:
+        average: 100
+        burst: 50
+        period: 1s
+
+    sec-headers:
+      headers:
+        frameDeny: true
+        sslRedirect: true
+        browserXssFilter: true
+        contentTypeNosniff: true
+        stsIncludeSubdomains: true
+        stsPreload: true
+        stsSeconds: 31536000
+        customFrameOptionsValue: SAMEORIGIN
+        contentSecurityPolicy: "default-src 'self'; script-src 'self' 'nonce-random-value'; object-src 'none'"
+
+  tls:
+    options:
+      default:
+        minVersion: VersionTLS13
+        cipherSuites:
+          - TLS_AES_128_GCM_SHA256
+          - TLS_AES_256_GCM_SHA384
+          - TLS_CHACHA20_POLY1305_SHA256
+        curvePreferences:
+          - CurveP521
+          - CurveP384
+        sniStrict: true

@@ -1,0 +1,48 @@
+# Static Configuration
+global:
+  checkNewVersion: false
+  sendAnonymousUsage: false
+
+log:
+  level: INFO
+  format: json
+
+api:
+  dashboard: false # Disabled in prod
+
+providers:
+  docker:
+    endpoint: "unix:///var/run/docker.sock"
+    exposedByDefault: false
+    swarmMode: true # Enable for Swarm
+  file:
+    filename: /etc/traefik/dynamic_conf.yml
+    watch: true
+
+entryPoints:
+  web:
+    address: ":80"
+    http:
+      redirections:
+        entryPoint:
+          to: websecure
+          scheme: https
+  websecure:
+    address: ":443"
+    http:
+      tls:
+        certResolver: myresolver
+        domains:
+          - main: "notimatic.com"
+            sans:
+              - "*.notimatic.com"
+
+certificatesResolvers:
+  myresolver:
+    acme:
+      email: security@notimatic.com
+      storage: /letsencrypt/acme.json
+      # Use DNS Challenge for better security (hides origin IP if behind CDN)
+      # or HTTP Challenge if simpler
+      httpChallenge:
+        entryPoint: web

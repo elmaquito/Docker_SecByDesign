@@ -1,0 +1,125 @@
+version: '3.8'
+
+services:
+  # --- Reverse Proxy / Edge ---
+  proxy:
+    image: traefik:v2.10
+    command:
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.websecure.address=:443"
+      # Force HTTPS
+      - "--entrypoints.web.http.redirections.entryPoint.to=websecure"
+      - "--entrypoints.web.http.redirections.entryPoint.scheme=https"
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock:ro" # Read-only socket access
+      - "./config/traefik:/etc/traefik"
+      - "traefik-certificates:/letsencrypt"
+    networks:
+      - net-public
+      - net-front
+      - net-api
+    security_opt:
+      - no-new-privileges:true
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+
+  # --- Frontend ---
+  frontend:
+    build:
+      context: ../frontend
+      dockerfile: ../infrastructure/Dockerfile.frontend
+    networks:
+      - net-front
+    security_opt:
+      - no-new-privileges:true
+    read_only: true # Immutable container
+    tmpfs:
+      - /var/cache/nginx
+      - /var/run
+    deploy:
+      replicas: 2
+      labels:
+        - "traefik.enable=true"
+        - "traefik.http.routers.front.rule=Host(`notimatic.com`)"
+        - "traefik.http.routers.front.entrypoints=websecure"
+        - "traefik.http.routers.front.tls.certresolver=myresolver"
+        - "traefik.http.routers.front.middlewares=sec-headers"
+
+  # --- Backend API ---
+  backend:
+    build:
+      context: ../backend
+      dockerfile: ../infrastructure/Dockerfile.backend
+    networks:
+      - net-api
+      - net-data
+    secrets:
+      - db_password
+      - jwt_secret
+    environment:
+      - DB_HOST=database
+      - DB_USER=notimatic_user
+      - DB_PASSWORD_FILE=/run/secrets/db_password
+      - NODE_ENV=production
+    security_opt:
+      - no-new-privileges:true
+      # - seccomp:unconfined # Replace with actual profile path
+    read_only: true
+    user: "65532" # Non-root
+    deploy:
+      replicas: 3
+      labels:
+        - "traefik.enable=true"
+        - "traefik.http.routers.api.rule=Host(`api.notimatic.com`)"
+        - "traefik.http.routers.api.entrypoints=websecure"
+        - "traefik.http.routers.api.middlewares=rate-limit,sec-headers"
+
+  # --- Database ---
+  database:
+    image: postgres:15-alpine
+    networks:
+      - net-data
+    secrets:
+      - db_password
+    environment:
+      - POSTGRES_USER=notimatic_user
+      - POSTGRES_DB=notimatic_db
+      - POSTGRES_PASSWORD_FILE=/run/secrets/db_password
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    deploy:
+      placement:
+        constraints: [node.role == manager] # Keep DB on manager or specific node for persistence
+
+secrets:
+  db_password:
+    external: true # Managed by Docker Swarm (docker secret create ...)
+  jwt_secret:
+    external: true
+
+networks:
+  net-public:
+    driver: overlay
+  net-front:
+    driver: overlay
+    internal: true # No internet access
+  net-api:
+    driver: overlay
+    internal: true
+  net-data:
+    driver: overlay
+    internal: true
+    driver_opts:
+      encrypted: "true" # Encrypt traffic between nodes
+
+volumes:
+  traefik-certificates:
+  db-data:

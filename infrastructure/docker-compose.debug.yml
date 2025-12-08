@@ -1,0 +1,15 @@
+version: '3.8'
+services:
+  # Test 1: Simple Docker CLI to verify socket access
+  debug-socket:
+    image: docker:cli
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    command: docker ps
+
+  # Test 2: Alpine with ls to check file existence and permissions
+  debug-fs:
+    image: alpine
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    command: ls -l /var/run/docker.sock
