@@ -168,6 +168,7 @@ import { ref, reactive, onMounted, computed } from 'vue'
 import Feed from './Feed.vue'
 import AccountSettings from './AccountSettings.vue'
 import { initializeNoteState } from '../utils/theme.js'
+import { API_V1_BASE_URL } from '../config/api.js'
 
 const props = defineProps(['user'])
 const notes = ref([])
@@ -202,7 +203,7 @@ const viewNote = (noteId) => {
 const fetchUsers = async () => {
   if (!canManageUsers.value) return
   try {
-    const res = await fetch('http://127.0.0.1:3001/api/v1/users', { credentials: 'include' })
+    const res = await fetch(`${API_V1_BASE_URL}/users`, { credentials: 'include' })
     if (res.ok) {
       users.value = await res.json()
     }
@@ -213,7 +214,7 @@ const fetchUsers = async () => {
 
 const createUser = async () => {
   try {
-    const res = await fetch('http://127.0.0.1:3001/api/v1/users', {
+    const res = await fetch(`${API_V1_BASE_URL}/users`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(newUser),
@@ -237,7 +238,7 @@ const createUser = async () => {
 
 const fetchNotes = async () => {
   try {
-    const res = await fetch('http://127.0.0.1:3001/api/v1/notes', { credentials: 'include' })
+    const res = await fetch(`${API_V1_BASE_URL}/notes`, { credentials: 'include' })
     if (res.ok) {
       const data = await res.json()
       // initialize editing/comments state using helper
@@ -257,7 +258,7 @@ const createNote = async () => {
   saveError.value = ''
   
   try {
-    const res = await fetch('http://127.0.0.1:3001/api/v1/notes', {
+    const res = await fetch(`${API_V1_BASE_URL}/notes`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(newNote),
@@ -287,7 +288,7 @@ const createNote = async () => {
 const deleteNote = async (id) => {
   if (!confirm('Delete this note?')) return
   try {
-    const res = await fetch(`http://127.0.0.1:3001/api/v1/notes/${id}`, {
+    const res = await fetch(`${API_V1_BASE_URL}/notes/${id}`, {
       method: 'DELETE',
       credentials: 'include'
     })
@@ -327,7 +328,7 @@ const saveEdit = async (note) => {
   note._saveError = ''
   
   try {
-    const res = await fetch(`http://127.0.0.1:3001/api/v1/notes/${note.id}`, {
+    const res = await fetch(`${API_V1_BASE_URL}/notes/${note.id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
@@ -353,7 +354,7 @@ const saveEdit = async (note) => {
 
 const fetchComments = async (note) => {
   try {
-    const res = await fetch(`http://127.0.0.1:3001/api/v1/notes/${note.id}/comments`, { credentials: 'include' })
+    const res = await fetch(`${API_V1_BASE_URL}/notes/${note.id}/comments`, { credentials: 'include' })
     if (res.ok) {
       note._comments = await res.json()
     }
@@ -365,7 +366,7 @@ const fetchComments = async (note) => {
 const postComment = async (note) => {
   if (!note._newComment || note._newComment.trim() === '') return
   try {
-    const res = await fetch(`http://127.0.0.1:3001/api/v1/notes/${note.id}/comments`, {
+    const res = await fetch(`${API_V1_BASE_URL}/notes/${note.id}/comments`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',

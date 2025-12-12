@@ -58,6 +58,7 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
+import { API_V1_BASE_URL } from '../config/api.js'
 
 const emit = defineEmits(['success'])
 
@@ -94,7 +95,7 @@ const resetPassword = async () => {
   loading.value = true
   
   try {
-    const res = await fetch('http://127.0.0.1:3001/api/v1/auth/password-reset/complete', {
+    const res = await fetch(`${API_V1_BASE_URL}/auth/password-reset/complete`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({

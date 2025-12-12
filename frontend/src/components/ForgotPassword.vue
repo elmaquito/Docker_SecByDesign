@@ -49,6 +49,7 @@
 
 <script setup>
 import { ref } from 'vue'
+import { API_V1_BASE_URL } from '../config/api.js'
 
 const emit = defineEmits(['back'])
 
@@ -68,7 +69,7 @@ const requestReset = async () => {
   error.value = ''
   
   try {
-    const res = await fetch('http://127.0.0.1:3001/api/v1/auth/password-reset/request', {
+    const res = await fetch(`${API_V1_BASE_URL}/auth/password-reset/request`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ username: username.value }),
