@@ -42,7 +42,7 @@ services:
       - ../backend:/app
       - /app/node_modules
     ports:
-      - "3000:3000" # Direct access for dev
+      - "3001:3000" # Direct access for dev (3001 to avoid conflict with Obsidian)
     environment:
       - DB_HOST=database
       - DB_PASSWORD=dev_secret_password

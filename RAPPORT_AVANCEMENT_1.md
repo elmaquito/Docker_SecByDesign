@@ -1,4 +1,4 @@
-# Rapport d'Avancement N°1 - Projet Notimatic (Secure by Design)
+ # Rapport d'Avancement N°1 - Projet Notimatic (Secure by Design)
 **Date :** 08 Décembre 2025
 **Statut Global :** Prototype Fonctionnel (Environnement de Développement)
 
@@ -40,8 +40,8 @@ L'application "Notimatic" est actuellement déployée et fonctionnelle dans un e
 Pour atteindre l'objectif final d'une application prête pour la production, les étapes suivantes sont nécessaires :
 
 ### 🧹 Nettoyage (Immédiat)
-- [ ] Retirer les affichages de debug (messages rouges) dans le Frontend (`App.vue`).
-- [ ] Retirer les logs verbeux dans le Backend (`main.ts`).
+- [x] Retirer les affichages de debug (messages rouges) dans le Frontend (`App.vue`).
+- [x] Retirer les logs verbeux dans le Backend (`main.ts`).
 
 ### 🚀 Passage en Production
 - [ ] **Validation de la configuration Prod :** Tester le fichier `docker-compose.prod.yml`.

@@ -30,7 +30,7 @@ const loading = ref(true)
 // Check if user is already logged in (via cookie)
 const checkAuth = async () => {
   try {
-    const res = await fetch('http://localhost:3000/notes', { 
+    const res = await fetch('http://127.0.0.1:3001/api/v1/notes', { 
       credentials: 'include'
     })
 
@@ -53,7 +53,7 @@ const handleLogin = (userData) => {
 }
 
 const logout = async () => {
-  await fetch('http://localhost:3000/auth/logout', { method: 'POST', credentials: 'include' })
+  await fetch('http://127.0.0.1:3001/api/v1/auth/logout', { method: 'POST', credentials: 'include' })
   user.value = null
   localStorage.removeItem('user')
 }

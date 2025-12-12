@@ -1,6 +1,6 @@
 <template>
   <div class="auth-box">
-    <h2>{{ isRegister ? 'Create Account' : 'Login' }}</h2>
+    <h2>{{ isSetup ? 'Setup Admin' : 'Login' }}</h2>
     
     <form @submit.prevent="submit">
       <div class="form-group">
@@ -11,20 +11,28 @@
       <div class="form-group">
         <label>Password</label>
         <input v-model="form.password" type="password" required minlength="12" />
-        <small v-if="isRegister">Min 12 chars, alphanumeric.</small>
+      </div>
+
+      <div v-if="isSetup" class="form-group">
+        <label>Confirm Password</label>
+        <input v-model="form.confirmPassword" type="password" required minlength="12" />
+      </div>
+
+      <div v-if="isSetup" class="info-box">
+        Create the initial Administrator account.
       </div>
 
       <div v-if="error" class="error">{{ error }}</div>
+      <div v-if="success" class="success">{{ success }}</div>
 
       <button type="submit" :disabled="submitting">
-        {{ isRegister ? 'Register' : 'Login' }}
+        {{ isSetup ? 'Create Admin' : 'Login' }}
       </button>
     </form>
 
     <p class="toggle-mode">
-      {{ isRegister ? 'Already have an account?' : 'New to Notimatic?' }}
-      <a href="#" @click.prevent="isRegister = !isRegister">
-        {{ isRegister ? 'Login here' : 'Register here' }}
+      <a href="#" @click.prevent="toggleMode">
+        {{ isSetup ? 'Back to Login' : 'First time? Run Setup' }}
       </a>
     </p>
   </div>
@@ -35,37 +43,48 @@ import { ref, reactive } from 'vue'
 
 const emit = defineEmits(['login-success'])
 
-const isRegister = ref(false)
+const isSetup = ref(false)
 const submitting = ref(false)
 const error = ref('')
-const form = reactive({ username: '', password: '' })
+const success = ref('')
+const form = reactive({ username: '', password: '', confirmPassword: '' })
+
+const toggleMode = () => {
+  isSetup.value = !isSetup.value
+  error.value = ''
+  success.value = ''
+  form.password = ''
+  form.confirmPassword = ''
+}
 
 const submit = async () => {
   submitting.value = true
   error.value = ''
+  success.value = ''
+
+  if (isSetup.value && form.password !== form.confirmPassword) {
+    error.value = "Passwords do not match"
+    submitting.value = false
+    return
+  }
   
-  const endpoint = isRegister.value ? '/auth/register' : '/auth/login'
+  const endpoint = isSetup.value ? '/api/v1/setup' : '/api/v1/auth/login'
   
   try {
-    const res = await fetch(`http://localhost:3000${endpoint}`, {
+    const res = await fetch(`http://127.0.0.1:3001${endpoint}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(form),
-      credentials: 'include' // Important for cookies
+      credentials: 'include'
     })
-
+    
     const data = await res.json()
-
-    if (!res.ok) {
-      throw new Error(data.error || 'Authentication failed')
-    }
-
-    if (isRegister.value) {
-      // Auto login after register or ask user to login?
-      // Let's switch to login mode
-      isRegister.value = false
-      error.value = 'Account created! Please login.'
-      form.password = ''
+    
+    if (!res.ok) throw new Error(data.error || 'Request failed')
+    
+    if (isSetup.value) {
+      success.value = 'Admin created! Please login.'
+      setTimeout(() => { isSetup.value = false }, 2000)
     } else {
       emit('login-success', data.user)
     }
@@ -85,5 +104,7 @@ input { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; b
 button { width: 100%; padding: 10px; background: #2ed573; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 1rem; }
 button:disabled { opacity: 0.7; }
 .error { color: red; margin-bottom: 1rem; font-size: 0.9rem; }
+.success { color: green; margin-bottom: 1rem; font-size: 0.9rem; }
+.info-box { background: #e3f2fd; padding: 10px; margin-bottom: 10px; border-radius: 4px; color: #0d47a1; font-size: 0.9rem; }
 .toggle-mode { text-align: center; margin-top: 1rem; font-size: 0.9rem; }
 </style>
