@@ -153,6 +153,7 @@
 <script setup>
 import { ref, reactive, onMounted, computed } from 'vue'
 import Feed from './Feed.vue'
+import { initializeNoteState } from '../utils/theme.js'
 
 const props = defineProps(['user'])
 const notes = ref([])
@@ -223,15 +224,15 @@ const fetchNotes = async () => {
     const res = await fetch('http://127.0.0.1:3001/api/v1/notes', { credentials: 'include' })
     if (res.ok) {
       const data = await res.json()
-      // initialize editing/comments state
-      notes.value = data.map(n => ({ ...n, _editing: false, _editedTitle: n.title, _editedContent: n.content, _comments: [], _newComment: '' }))
+      // initialize editing/comments state using helper
+      notes.value = data.map(initializeNoteState)
       // fetch comments for visible notes
       for (const n of notes.value) {
         await fetchComments(n)
       }
     }
   } catch (e) {
-    console.error(e)
+    console.error('Failed to fetch notes:', e)
   }
 }
 
@@ -246,14 +247,17 @@ const createNote = async () => {
     
     if (res.ok) {
       const savedNote = await res.json()
-      notes.value.unshift({ ...savedNote, _editing: false, _editedTitle: savedNote.title, _editedContent: savedNote.content, _comments: [], _newComment: '' })
+      notes.value.unshift(initializeNoteState(savedNote))
       newNote.title = ''
       newNote.content = ''
       showCreateModal.value = false
       activeView.value = 'my-notes'
+    } else {
+      const data = await res.json()
+      console.error('Échec de l\'enregistrement:', data.error || 'Erreur inconnue')
     }
   } catch (e) {
-    alert('Échec de l\'enregistrement de la note')
+    console.error('Échec de l\'enregistrement de la note:', e)
   }
 }
 

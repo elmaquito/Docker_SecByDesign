@@ -22,7 +22,7 @@
         v-for="theme in displayThemes" 
         :key="theme.id" 
         class="theme-badge"
-        :style="{ backgroundColor: getThemeColor(theme.color) }"
+        :style="{ backgroundColor: getThemeColorLocal(theme.color) }"
       >
         {{ theme.name }}
       </span>
@@ -48,6 +48,7 @@
 
 <script setup>
 import { computed } from 'vue'
+import { getThemeColor } from '../utils/theme.js'
 
 const props = defineProps({
   note: {
@@ -65,7 +66,7 @@ const getNoteIcon = computed(() => {
 })
 
 const getAuthorName = computed(() => {
-  return props.note.author_name || `User ${props.note.user_id}`
+  return props.note.author_name || props.note.username || 'Utilisateur anonyme'
 })
 
 const getExcerpt = computed(() => {
@@ -97,19 +98,7 @@ const formatDate = (dateString) => {
   return date.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })
 }
 
-const getThemeColor = (color) => {
-  const colors = {
-    red: '#e74c3c',
-    blue: '#3498db',
-    purple: '#9b59b6',
-    green: '#2ecc71',
-    orange: '#e67e22',
-    cyan: '#1abc9c',
-    yellow: '#f39c12',
-    pink: '#e91e63'
-  }
-  return colors[color] || '#3498db'
-}
+const getThemeColorLocal = getThemeColor
 </script>
 
 <style scoped>

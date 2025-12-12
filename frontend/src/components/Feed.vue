@@ -20,7 +20,7 @@
         <div class="filter-options">
           <label v-for="theme in availableThemes" :key="theme.id" class="filter-checkbox">
             <input type="checkbox" :value="theme.id" v-model="selectedThemes" />
-            <span :style="{ color: getThemeColor(theme.color) }">{{ theme.name }}</span>
+            <span :style="{ color: getThemeColorLocal(theme.color) }">{{ theme.name }}</span>
           </label>
         </div>
       </div>
@@ -60,6 +60,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import NoteCard from './NoteCard.vue'
+import { getThemeColor } from '../utils/theme.js'
 
 const props = defineProps(['user'])
 const emit = defineEmits(['view-note'])
@@ -120,22 +121,24 @@ const filteredNotes = computed(() => {
     )
   }
   
+  // Apply theme filters
+  if (selectedThemes.value.length > 0) {
+    result = result.filter(n => 
+      n.themes && n.themes.some(t => selectedThemes.value.includes(t.id))
+    )
+  }
+  
+  // Apply category filters
+  if (selectedCategories.value.length > 0) {
+    result = result.filter(n => 
+      n.categories && n.categories.some(c => selectedCategories.value.includes(c.id))
+    )
+  }
+  
   return result
 })
 
-const getThemeColor = (color) => {
-  const colors = {
-    red: '#e74c3c',
-    blue: '#3498db',
-    purple: '#9b59b6',
-    green: '#2ecc71',
-    orange: '#e67e22',
-    cyan: '#1abc9c',
-    yellow: '#f39c12',
-    pink: '#e91e63'
-  }
-  return colors[color] || '#3498db'
-}
+const getThemeColorLocal = getThemeColor
 
 const applyFilters = () => {
   // Filters would be applied here
