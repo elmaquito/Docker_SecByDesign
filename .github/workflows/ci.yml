@@ -262,7 +262,11 @@ jobs:
       - name: Check if SARIF file exists
         id: check_sarif
         run: |
+          echo "Current directory: $(pwd)"
+          echo "Files in current directory:"
+          ls -la
           if [ -f "${{ env.SARIF_FILE }}" ]; then
+            echo "✅ SARIF file found: ${{ env.SARIF_FILE }}"
             echo "sarif_exists=true" >> $GITHUB_OUTPUT
           else
             echo "sarif_exists=false" >> $GITHUB_OUTPUT
