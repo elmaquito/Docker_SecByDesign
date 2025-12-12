@@ -1,64 +1,292 @@
 # Notimatic - Secure by Design Project
 
-Bienvenue dans le projet **Notimatic**. Ce dépôt contient l'architecture et l'implémentation de référence pour une application de prise de notes sécurisée.
+Bienvenue dans le projet **Notimatic**. Ce dépôt contient l'architecture et l'implémentation de référence pour une application de prise de notes sécurisée avec **feed d'actualités, commentaires, assignation par thèmes et catégories ciblées**.
+
+## 📋 État du Projet
+
+🎯 **Phase actuelle**: Roadmap MVP complète et migrations préparées  
+✅ **Documentation**: 100% complète  
+✅ **Base de données**: Schéma étendu avec migrations SQL  
+✅ **CI/CD**: Pipeline GitHub Actions configuré  
+📝 **Prochaine étape**: Créer les issues GitHub et commencer le développement
 
 ## 🚀 Démarrage Rapide
 
 ### Prérequis
-- Docker & Docker Compose installés.
-- Node.js (optionnel, pour le développement local hors Docker).
+- Docker & Docker Compose installés
+- Node.js 20.x (optionnel, pour le développement local hors Docker)
+- PostgreSQL 16 (si développement local)
 
 ### 1. Structure du Projet
-- `docs/` : Documentation d'architecture, Threat Model, Playbooks.
-- `infrastructure/` : Fichiers Docker Compose et Dockerfiles.
-- `backend/` : Code source de l'API (Node.js/Express).
-- `frontend/` : Code source du Frontend (Vue.js/Vite).
-- `config/` : Configuration Traefik.
-- `scripts/` : Scripts d'opérations de sécurité.
+- `docs/` : Documentation complète (architecture, roadmap, wireframes, GDPR)
+- `backend/` : API Node.js/Express/TypeScript + migrations SQL
+- `frontend/` : Application Vue.js/Vite (à migrer vers TypeScript + Pinia)
+- `infrastructure/` : Docker Compose et configuration
+- `.github/workflows/` : Pipeline CI/CD
 
-### 2. Lancer l'environnement de Développement
-Cet environnement monte le code source en volume pour le hot-reloading.
+### 2. Appliquer les Migrations
 
-> **Note :** En mode dev local, Traefik est désactivé pour éviter les problèmes de socket Windows. Les ports sont exposés directement.
+Avant de lancer l'application, appliquer les migrations SQL:
 
-```powershell
-# Depuis la racine du projet
+```bash
+cd backend
+./migrate.sh
+```
+
+Cela créera les tables nécessaires:
+- `profiles` - Profils utilisateurs (classe, promo, niveau)
+- `themes` - Thématiques pour organisation des notes
+- `categories` - Catégories pour ciblage
+- `note_targets` - Assignation de notes
+- `audit_logs` - Logs d'audit
+- `gdpr_export_requests` - Conformité RGPD
+- Et plus...
+
+### 3. Lancer l'environnement de Développement
+
+Mode développement avec hot-reloading:
+
+```bash
 docker-compose -f infrastructure/docker-compose.dev.yml up --build
 ```
 
-- **Frontend :** http://localhost:5173
-- **Backend API :** http://localhost:3000
-- **Base de données :** localhost:5432 (User: `user`, Pass: `dev_secret_password`)
+Ou en mode local (sans Docker):
 
-### 3. Simuler la Production
-L'environnement de production utilise des réseaux chiffrés, des secrets Docker, et des conteneurs en lecture seule.
+```bash
+# Terminal 1: Backend
+cd backend
+npm install
+npm run build
+npm run start:dev
 
-> **Note :** Le mode Swarm est requis pour les secrets et configs.
+# Terminal 2: Frontend
+cd frontend
+npm install
+npm run dev
+```
 
-```powershell
-# 1. Initialiser Swarm (si ce n'est pas déjà fait)
+**URLs**:
+- **Frontend**: http://localhost:5173
+- **Backend API**: http://localhost:3000
+- **Base de données**: localhost:5432 (User: `user`, Pass: `dev_secret_password`)
+
+### 4. Simuler la Production
+
+Mode production avec Docker Swarm:
+
+```bash
+# 1. Initialiser Swarm
 docker swarm init
 
-# 2. Créer les secrets (simulation)
+# 2. Créer les secrets
 printf "super_secure_db_password" | docker secret create db_password -
 printf "super_secure_jwt_secret" | docker secret create jwt_secret -
 
-# 3. Créer le réseau overlay (si nécessaire, ou laisser le stack le faire)
-# docker network create --driver overlay --opt encrypted net-data
-
-# 4. Déployer la stack
+# 3. Déployer la stack
 docker stack deploy -c infrastructure/docker-compose.prod.yml notimatic
 ```
 
-### 4. Opérations de Sécurité
-Utilisez le script fourni pour scanner et signer les images.
+## 📚 Documentation
 
-```powershell
-# Rendre le script exécutable (si sous Linux/WSL) ou utiliser Git Bash
-./scripts/security_ops.sh scan
+### Documentation Principale
+
+- **[ARCHITECTURE.md](docs/ARCHITECTURE.md)** - Analyse technique complète, stack retenue, décisions
+- **[ROADMAP.md](docs/ROADMAP.md)** - Roadmap par version avec timeline (6-8 semaines)
+- **[wireframes.md](docs/wireframes.md)** - Wireframes UX détaillés (7 écrans)
+- **[GDPR.md](docs/GDPR.md)** - Conformité RGPD (données, droits, procédures)
+- **[GITHUB_ISSUES.md](docs/GITHUB_ISSUES.md)** - 18 issues détaillées à créer
+- **[RAPPORT_FINAL.md](docs/RAPPORT_FINAL.md)** - Rapport complet du travail accompli
+
+### Documentation Technique
+
+- **[Migrations SQL](backend/migrations/README.md)** - Guide des migrations
+- **[CI/CD Pipeline](.github/workflows/ci.yml)** - Configuration GitHub Actions
+
+### Documentation Existante
+
+- **[Architecture Proposal](docs/PROPOSAL_ARCHITECTURE.md)** - Proposition initiale
+- **[Threat Model](docs/THREAT_MODEL_AND_PLAYBOOKS.md)** - Modèle de menaces et playbooks
+
+## 🏗️ Architecture
+
+### Stack Technique
+
+**Backend**:
+- Node.js 20.x + Express.js 4.18
+- TypeScript 5.1
+- PostgreSQL 16 (client natif `pg`)
+- JWT avec HTTP-only cookies
+- Argon2 pour hashing
+- Zod pour validation
+
+**Frontend** (en migration):
+- Vue 3.3.4
+- Vite 4.4.5
+- **À ajouter**: TypeScript, Pinia, Vue Router, Vitest
+
+**Infrastructure**:
+- Docker + Docker Compose
+- Traefik (reverse proxy)
+- GitHub Actions (CI/CD)
+- Trivy (scan sécurité)
+
+### Base de Données
+
+Schéma étendu avec 13 tables:
+- `users`, `profiles` - Utilisateurs et profils
+- `notes`, `comments` - Contenu
+- `themes`, `categories` - Organisation et ciblage
+- `note_themes`, `note_categories`, `note_targets` - Associations
+- `audit_logs`, `gdpr_export_requests` - Audit et GDPR
+- `schema_migrations` - Tracking migrations
+
+Voir [ARCHITECTURE.md](docs/ARCHITECTURE.md) pour le schéma complet.
+
+## 🎯 Roadmap MVP
+
+### Version 0.2.0 - Extensions Base de Données & TypeScript ⏳
+- Migrations SQL (✅ créées, à tester)
+- Migration frontend vers TypeScript + Pinia
+
+### Version 0.3.0 - API Thèmes & Catégories
+- Endpoints CRUD pour themes et categories
+- Endpoints profils utilisateurs
+
+### Version 0.4.0 - Feed Intelligent & Assignation 🎯
+- Endpoint `/api/feed` avec filtrage
+- Logique de ciblage (note_targets)
+- Composants Vue (FeedList, NoteCard, etc.)
+
+### Version 0.5.0 - Sécurité & GDPR 🔒
+- Endpoints GDPR (export/purge)
+- Rate limiting et sanitization XSS
+- Audit logging
+
+### Version 0.6.0 - Tests & CI/CD ✅
+- Tests unitaires (Jest, Vitest)
+- Tests E2E (Playwright)
+- CI/CD complet
+
+### Version 1.0.0 - Production Ready 🚀
+- Documentation complète
+- Déploiement production
+- Release
+
+**Timeline estimée**: 6-8 semaines avec 1-2 développeurs
+
+Voir [ROADMAP.md](docs/ROADMAP.md) pour le détail complet.
+
+## 🔒 Sécurité & RGPD
+
+### Mesures de Sécurité
+
+✅ **Existantes**:
+- JWT avec HTTP-only cookies
+- Argon2 pour hashing de mots de passe
+- Helmet pour headers sécurisés
+- CORS configuré
+- Requêtes SQL paramétrées (anti-injection)
+- Validation Zod
+
+🔲 **À implémenter**:
+- Rate limiting (express-rate-limit)
+- Sanitization XSS (DOMPurify, validator)
+- CSRF protection (csurf)
+- Audit logging pour actions critiques
+- Scan dépendances (npm audit, Trivy)
+
+### Conformité RGPD
+
+✅ **Documentation** complète dans [GDPR.md](docs/GDPR.md)  
+✅ **Schéma de données** GDPR (migration 004)  
+🔲 **Endpoints** GDPR à implémenter:
+- `GET /api/v1/users/:id/export` - Export données
+- `DELETE /api/v1/users/:id` - Suppression/anonymisation
+
+**Politique de conservation**:
+- Comptes: durée du contrat + 1 an
+- Audit logs: 6 mois
+- Exports GDPR: 3 mois
+- Soft delete puis anonymisation à 30 jours
+
+## 🧪 Tests
+
+### Tests Unitaires
+```bash
+# Backend
+cd backend
+npm test
+
+# Frontend
+cd frontend
+npm test
 ```
 
-## 📚 Documentation
-Pour comprendre les choix d'architecture et les mesures de sécurité, consultez :
-- [Architecture Proposal](docs/PROPOSAL_ARCHITECTURE.md)
-- [Threat Model](docs/THREAT_MODEL_AND_PLAYBOOKS.md)
+### Tests E2E
+```bash
+npx playwright test
+```
+
+### CI/CD
+
+Le pipeline GitHub Actions s'exécute automatiquement sur chaque push:
+- Lint backend & frontend
+- Tests unitaires
+- Build TypeScript
+- Scan sécurité (Trivy, npm audit)
+- Tests E2E (sur PR)
+- Build Docker images
+
+## 📝 Créer les Issues GitHub
+
+Les issues sont documentées dans [docs/GITHUB_ISSUES.md](docs/GITHUB_ISSUES.md).
+
+**Total**: 18 issues réparties en 7 epics
+
+Pour créer les issues (via GitHub CLI):
+
+```bash
+# Exemple
+gh issue create \
+  --title "Implement /api/feed endpoint" \
+  --body-file docs/issue-templates/epic-1-issue-1.md \
+  --label "backend,MVP,high-priority"
+```
+
+Ou créer manuellement dans l'interface GitHub en copiant le contenu de `GITHUB_ISSUES.md`.
+
+## 👥 Contribution
+
+### Workflow de Développement
+
+1. Créer une branche `feature/nom-feature`
+2. Développer avec tests
+3. Pousser et créer une Pull Request
+4. CI doit passer au vert
+5. Code review
+6. Merge vers `main`
+
+### Standards de Code
+
+- **TypeScript strict mode**
+- **ESLint + Prettier** (à configurer)
+- **Tests requis** pour nouvelles features
+- **Documentation** à jour
+- **Commits conventionnels** (feat, fix, docs, etc.)
+
+## 📞 Support
+
+- **Issues GitHub**: https://github.com/elmaquito/NOTIMATIC/issues
+- **Documentation**: Voir dossier `docs/`
+- **GDPR/DPO**: dpo@notimatic.example.com (à configurer)
+
+## 📄 License
+
+À définir
+
+---
+
+**Version**: 0.2.0-alpha  
+**Dernière mise à jour**: 12 décembre 2024  
+**Statut**: En développement actif 🚧
+
