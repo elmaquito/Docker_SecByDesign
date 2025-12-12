@@ -329,6 +329,28 @@ api.post('/setup', async (req, res) => {
   }
 });
 
+// Themes: List (Authenticated)
+api.get('/themes', authenticateToken, async (req, res) => {
+  try {
+    const result = await pool.query('SELECT * FROM themes ORDER BY name ASC');
+    res.json(result.rows);
+  } catch (err) {
+    console.error('Error fetching themes:', err);
+    res.status(500).json({ error: 'Internal error' });
+  }
+});
+
+// Categories: List (Authenticated)
+api.get('/categories', authenticateToken, async (req, res) => {
+  try {
+    const result = await pool.query('SELECT * FROM categories ORDER BY name ASC');
+    res.json(result.rows);
+  } catch (err) {
+    console.error('Error fetching categories:', err);
+    res.status(500).json({ error: 'Internal error' });
+  }
+});
+
 // Mount API
 app.use('/api/v1', api);
 

@@ -1,97 +1,187 @@
 <template>
   <div class="main-dashboard">
-    <div v-if="canManageUsers" class="admin-toggle">
-      <button class="manage-btn" @click="showAdminPanel = !showAdminPanel">
-        {{ showAdminPanel ? 'Hide User Management' : 'Manage Users' }}
+    <!-- Quick Actions Bar -->
+    <div class="quick-actions">
+      <button @click="activeView = 'feed'" :class="{ active: activeView === 'feed' }" class="action-btn">
+        📰 Feed d'Actualités
+      </button>
+      <button @click="activeView = 'my-notes'" :class="{ active: activeView === 'my-notes' }" class="action-btn">
+        📝 Mes Notes
+      </button>
+      <button @click="showCreateModal = true" class="action-btn action-btn-primary">
+        ➕ Créer une Note
+      </button>
+      <button v-if="canManageUsers" @click="activeView = 'admin'" :class="{ active: activeView === 'admin' }" class="action-btn">
+        👥 Gestion Utilisateurs
       </button>
     </div>
-    <div v-if="canManageUsers && showAdminPanel" class="admin-section">
-      <h3>User Management</h3>
-      <div class="admin-controls">
-        <form @submit.prevent="createUser" class="user-form">
-          <input v-model="newUser.username" placeholder="Username" required />
-          <input v-model="newUser.password" type="password" placeholder="Password" required />
-          <select v-model="newUser.role">
-            <option value="student">Student</option>
-            <option value="teacher">Teacher</option>
-            <option value="technician">Technician</option>
-            <option value="admin">Admin</option>
-          </select>
-          <button type="submit">Add User</button>
+
+    <!-- User Profile Info -->
+    <div class="user-profile-card">
+      <div class="profile-info">
+        <div class="avatar">{{ user.username.charAt(0).toUpperCase() }}</div>
+        <div class="profile-details">
+          <h3>{{ user.username }}</h3>
+          <span class="role-badge" :class="'role-' + user.role">{{ getRoleLabel(user.role) }}</span>
+        </div>
+      </div>
+      <div class="profile-stats">
+        <div class="stat-item">
+          <div class="stat-value">{{ notes.length }}</div>
+          <div class="stat-label">Notes</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-value">{{ totalComments }}</div>
+          <div class="stat-label">Commentaires</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Feed View -->
+    <div v-if="activeView === 'feed'" class="view-container">
+      <Feed :user="user" @view-note="viewNote" />
+    </div>
+
+    <!-- My Notes View -->
+    <div v-else-if="activeView === 'my-notes'" class="view-container">
+      <div class="section-header">
+        <h2>📝 Mes Notes</h2>
+      </div>
+      
+      <div v-if="notes.length === 0" class="empty-state">
+        <p>Aucune note pour le moment.</p>
+        <button @click="showCreateModal = true" class="btn-create">Créer votre première note</button>
+      </div>
+      
+      <div v-else class="notes-list">
+        <div v-for="note in notes" :key="note.id" class="note-card">
+          <div class="note-header">
+            <div style="display:flex; gap:12px; align-items:center">
+              <h4 v-if="!note._editing">{{ note.title }}</h4>
+              <input v-if="note._editing" v-model="note._editedTitle" class="edit-input" />
+              <small style="color:#666">{{ new Date(note.created_at).toLocaleString('fr-FR') }}</small>
+            </div>
+            <div class="note-actions">
+              <button v-if="canEdit(note) && !note._editing" @click="startEdit(note)" class="btn-icon">✏️</button>
+              <button v-if="note._editing" @click="saveEdit(note)" class="btn-icon">💾</button>
+              <button v-if="note._editing" @click="cancelEdit(note)" class="btn-icon">❌</button>
+              <button @click="deleteNote(note.id)" class="btn-icon delete">🗑️</button>
+            </div>
+          </div>
+          <div v-if="!note._editing" class="note-content">
+            <p>{{ note.content }}</p>
+          </div>
+          <div v-else>
+            <textarea v-model="note._editedContent" class="edit-textarea"></textarea>
+          </div>
+
+          <!-- Comments -->
+          <div class="comments-section">
+            <h5>💬 Commentaires ({{ note._comments?.length || 0 }})</h5>
+            <div v-if="note._comments && note._comments.length === 0" class="empty-comments">Aucun commentaire</div>
+            <div v-for="c in note._comments" :key="c.id" class="comment">
+              <strong>{{ c.username }}</strong>: {{ c.content }}
+              <small>— {{ new Date(c.created_at).toLocaleString('fr-FR') }}</small>
+            </div>
+
+            <div class="comment-form">
+              <input v-model="note._newComment" placeholder="Écrire un commentaire..." class="comment-input" />
+              <button @click="postComment(note)" class="btn-comment">Publier</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Admin Panel -->
+    <div v-else-if="activeView === 'admin' && canManageUsers" class="view-container">
+      <div class="section-header">
+        <h2>👥 Gestion des Utilisateurs</h2>
+      </div>
+      
+      <div class="admin-section">
+        <div class="create-user-form">
+          <h3>Créer un Utilisateur</h3>
+          <form @submit.prevent="createUser" class="user-form">
+            <input v-model="newUser.username" placeholder="Nom d'utilisateur" required class="form-input" />
+            <input v-model="newUser.password" type="password" placeholder="Mot de passe" required class="form-input" />
+            <select v-model="newUser.role" class="form-select">
+              <option value="student">Étudiant</option>
+              <option value="teacher">Enseignant</option>
+              <option value="technician">Technicien</option>
+              <option value="admin">Administrateur</option>
+            </select>
+            <button type="submit" class="btn-submit">Ajouter</button>
+          </form>
+        </div>
+        
+        <div class="users-list">
+          <h3>Liste des Utilisateurs</h3>
+          <div class="users-grid">
+            <div v-for="u in users" :key="u.id" class="user-card">
+              <div class="user-avatar">{{ u.username.charAt(0).toUpperCase() }}</div>
+              <div class="user-info">
+                <strong>{{ u.username }}</strong>
+                <span class="role-badge" :class="'role-' + u.role">{{ getRoleLabel(u.role) }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Create Note Modal -->
+    <div v-if="showCreateModal" class="modal-overlay" @click="showCreateModal = false">
+      <div class="modal-content" @click.stop>
+        <div class="modal-header">
+          <h3>📝 Créer une Nouvelle Note</h3>
+          <button @click="showCreateModal = false" class="modal-close">×</button>
+        </div>
+        <form @submit.prevent="createNote" class="note-form">
+          <input v-model="newNote.title" placeholder="Titre de la note" required class="form-input" />
+          <textarea v-model="newNote.content" placeholder="Contenu de la note (chiffré en transit)" required class="form-textarea"></textarea>
+          <div class="modal-actions">
+            <button type="button" @click="showCreateModal = false" class="btn-cancel">Annuler</button>
+            <button type="submit" class="btn-submit">Enregistrer</button>
+          </div>
         </form>
       </div>
-      <div class="users-list">
-        <div v-for="u in users" :key="u.id" class="user-tag">
-          <strong>{{ u.username }}</strong> <small>({{ u.role }})</small>
-        </div>
-      </div>
-    </div>
-
-    <div class="dashboard">
-      <div class="create-note">
-      <h3>New Secure Note</h3>
-      <form @submit.prevent="createNote">
-        <input v-model="newNote.title" placeholder="Title" required />
-        <textarea v-model="newNote.content" placeholder="Content (encrypted in transit)" required></textarea>
-        <button type="submit">Save Note</button>
-      </form>
-    </div>
-
-    <div class="notes-list">
-      <h3>Your Notes</h3>
-      <div v-if="notes.length === 0" class="empty">No notes yet.</div>
-      
-      <div v-for="note in notes" :key="note.id" class="note-card">
-        <div class="note-header">
-          <div style="display:flex; gap:12px; align-items:center">
-            <h4 v-if="!note._editing">{{ note.title }}</h4>
-            <input v-if="note._editing" v-model="note._editedTitle" />
-            <small style="color:#666">by {{ note.user_id }}{{ note.owner_role ? ' (' + note.owner_role + ')' : '' }}</small>
-          </div>
-          <div>
-            <button v-if="canEdit(note) && !note._editing" @click="startEdit(note)" class="manage-btn">Edit</button>
-            <button v-if="note._editing" @click="saveEdit(note)" class="manage-btn">Save</button>
-            <button v-if="note._editing" @click="cancelEdit(note)" class="manage-btn">Cancel</button>
-            <button @click="deleteNote(note.id)" class="delete-btn">×</button>
-          </div>
-        </div>
-        <div v-if="!note._editing">
-          <p>{{ note.content }}</p>
-        </div>
-        <div v-else>
-          <textarea v-model="note._editedContent"></textarea>
-        </div>
-        <small>{{ new Date(note.created_at).toLocaleString() }}</small>
-
-        <!-- Comments -->
-        <div class="comments">
-          <div v-if="note._comments && note._comments.length === 0" class="empty">No comments.</div>
-          <div v-for="c in note._comments" :key="c.id" class="comment">
-            <strong>{{ c.username }}</strong>: {{ c.content }} <small style="color:#666">— {{ new Date(c.created_at).toLocaleString() }}</small>
-          </div>
-
-          <div class="comment-form">
-            <input v-model="note._newComment" placeholder="Write a comment..." />
-            <button @click="postComment(note)">Comment</button>
-          </div>
-        </div>
-      </div>
-    </div>
     </div>
   </div>
 </template>
 
 <script setup>
 import { ref, reactive, onMounted, computed } from 'vue'
+import Feed from './Feed.vue'
+import { initializeNoteState } from '../utils/theme.js'
 
 const props = defineProps(['user'])
 const notes = ref([])
 const users = ref([])
 const newNote = reactive({ title: '', content: '' })
 const newUser = reactive({ username: '', password: '', role: 'student' })
+const activeView = ref('feed')
+const showCreateModal = ref(false)
 
 const canManageUsers = computed(() => ['admin', 'technician'].includes(props.user.role))
-const showAdminPanel = ref(true)
+const totalComments = computed(() => {
+  return notes.value.reduce((sum, note) => sum + (note._comments?.length || 0), 0)
+})
+
+const getRoleLabel = (role) => {
+  const labels = {
+    admin: 'Administrateur',
+    technician: 'Technicien',
+    teacher: 'Enseignant',
+    student: 'Étudiant'
+  }
+  return labels[role] || role
+}
+
+const viewNote = (noteId) => {
+  // Switch to my-notes view and potentially scroll to the note
+  activeView.value = 'my-notes'
+}
 
 const fetchUsers = async () => {
   if (!canManageUsers.value) return
@@ -134,15 +224,15 @@ const fetchNotes = async () => {
     const res = await fetch('http://127.0.0.1:3001/api/v1/notes', { credentials: 'include' })
     if (res.ok) {
       const data = await res.json()
-      // initialize editing/comments state
-      notes.value = data.map(n => ({ ...n, _editing: false, _editedTitle: n.title, _editedContent: n.content, _comments: [], _newComment: '' }))
+      // initialize editing/comments state using helper
+      notes.value = data.map(initializeNoteState)
       // fetch comments for visible notes
       for (const n of notes.value) {
         await fetchComments(n)
       }
     }
   } catch (e) {
-    console.error(e)
+    console.error('Failed to fetch notes:', e)
   }
 }
 
@@ -157,12 +247,17 @@ const createNote = async () => {
     
     if (res.ok) {
       const savedNote = await res.json()
-      notes.value.unshift(savedNote)
+      notes.value.unshift(initializeNoteState(savedNote))
       newNote.title = ''
       newNote.content = ''
+      showCreateModal.value = false
+      activeView.value = 'my-notes'
+    } else {
+      const data = await res.json()
+      console.error('Échec de l\'enregistrement:', data.error || 'Erreur inconnue')
     }
   } catch (e) {
-    alert('Failed to save note')
+    console.error('Échec de l\'enregistrement de la note:', e)
   }
 }
 
@@ -265,25 +360,497 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.dashboard { display: grid; gap: 2rem; grid-template-columns: 1fr 2fr; }
-.create-note { background: white; padding: 1.5rem; border-radius: 8px; height: fit-content; }
-.create-note input, .create-note textarea { width: 100%; margin-bottom: 1rem; padding: 8px; box-sizing: border-box; }
-.create-note textarea { height: 100px; }
-.note-card { background: white; padding: 1rem; border-radius: 8px; margin-bottom: 1rem; border-left: 4px solid #3742fa; position: relative; }
-.note-header { display: flex; justify-content: space-between; align-items: start; }
-.note-card h4 { margin: 0 0 0.5rem 0; }
-.delete-btn { background: none; border: none; color: #ff4757; font-size: 1.5rem; cursor: pointer; padding: 0 5px; }
-.delete-btn:hover { color: #ff6b81; }
+.main-dashboard {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 1rem;
+}
 
-.main-dashboard { display: flex; flex-direction: column; gap: 2rem; }
-.admin-section { background: #fff3cd; padding: 1.5rem; border-radius: 8px; border: 1px solid #ffeeba; }
-.admin-controls { margin-bottom: 1rem; }
-.inline-form { display: flex; gap: 10px; align-items: center; }
-.inline-form input, .inline-form select { padding: 8px; border: 1px solid #ddd; border-radius: 4px; }
-.users-grid { display: flex; flex-wrap: wrap; gap: 10px; }
-.mini-card { background: white; padding: 5px 10px; border-radius: 4px; border: 1px solid #ddd; font-size: 0.9rem; }
+.quick-actions {
+  display: flex;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+  padding: 1rem;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
 
-.admin-toggle { display: flex; justify-content: flex-end; }
-.manage-btn { background: #3742fa; color: white; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; }
-.manage-btn:hover { opacity: 0.95; }
+.action-btn {
+  padding: 10px 20px;
+  border: 2px solid #e9ecef;
+  background: white;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.95rem;
+  font-weight: 500;
+  transition: all 0.3s;
+  color: #495057;
+}
+
+.action-btn:hover {
+  border-color: #3498db;
+  color: #3498db;
+  background: #e3f2fd;
+}
+
+.action-btn.active {
+  background: #3498db;
+  color: white;
+  border-color: #3498db;
+}
+
+.action-btn-primary {
+  background: #2ecc71;
+  color: white;
+  border-color: #2ecc71;
+}
+
+.action-btn-primary:hover {
+  background: #27ae60;
+  border-color: #27ae60;
+}
+
+.user-profile-card {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  padding: 1.5rem;
+  border-radius: 12px;
+  margin-bottom: 1.5rem;
+  color: white;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+.profile-info {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.avatar {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  font-weight: bold;
+}
+
+.profile-details h3 {
+  margin: 0 0 0.25rem 0;
+  font-size: 1.5rem;
+}
+
+.role-badge {
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  display: inline-block;
+}
+
+.role-admin {
+  background: #e74c3c;
+  color: white;
+}
+
+.role-technician {
+  background: #3498db;
+  color: white;
+}
+
+.role-teacher {
+  background: #2ecc71;
+  color: white;
+}
+
+.role-student {
+  background: #f39c12;
+  color: white;
+}
+
+.profile-stats {
+  display: flex;
+  gap: 2rem;
+}
+
+.stat-item {
+  text-align: center;
+}
+
+.stat-value {
+  font-size: 2rem;
+  font-weight: bold;
+  margin-bottom: 0.25rem;
+}
+
+.stat-label {
+  font-size: 0.85rem;
+  opacity: 0.9;
+}
+
+.view-container {
+  margin-top: 1.5rem;
+}
+
+.section-header {
+  margin-bottom: 1.5rem;
+}
+
+.section-header h2 {
+  margin: 0;
+  color: #2c3e50;
+  font-size: 1.75rem;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 3rem;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.empty-state p {
+  color: #6c757d;
+  margin-bottom: 1rem;
+  font-size: 1.1rem;
+}
+
+.btn-create {
+  padding: 12px 24px;
+  background: #3498db;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 1rem;
+  transition: background 0.3s;
+}
+
+.btn-create:hover {
+  background: #2980b9;
+}
+
+.notes-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.note-card {
+  background: white;
+  padding: 1.5rem;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  border-left: 4px solid #3498db;
+}
+
+.note-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: start;
+  margin-bottom: 1rem;
+}
+
+.note-header h4 {
+  margin: 0;
+  color: #2c3e50;
+  font-size: 1.25rem;
+}
+
+.note-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.btn-icon {
+  background: none;
+  border: none;
+  font-size: 1.25rem;
+  cursor: pointer;
+  padding: 0.25rem;
+  transition: transform 0.2s;
+}
+
+.btn-icon:hover {
+  transform: scale(1.2);
+}
+
+.btn-icon.delete:hover {
+  filter: brightness(0.8);
+}
+
+.note-content {
+  color: #495057;
+  line-height: 1.6;
+  margin-bottom: 1rem;
+}
+
+.note-content p {
+  margin: 0;
+}
+
+.edit-input {
+  padding: 8px 12px;
+  border: 2px solid #3498db;
+  border-radius: 6px;
+  font-size: 1rem;
+  width: 100%;
+  max-width: 400px;
+}
+
+.edit-textarea {
+  width: 100%;
+  padding: 12px;
+  border: 2px solid #3498db;
+  border-radius: 6px;
+  font-size: 1rem;
+  min-height: 100px;
+  font-family: inherit;
+  resize: vertical;
+}
+
+.comments-section {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid #e9ecef;
+}
+
+.comments-section h5 {
+  margin: 0 0 0.75rem 0;
+  color: #495057;
+  font-size: 1rem;
+}
+
+.empty-comments {
+  color: #6c757d;
+  font-style: italic;
+  font-size: 0.9rem;
+  margin-bottom: 0.75rem;
+}
+
+.comment {
+  padding: 0.75rem;
+  background: #f8f9fa;
+  border-radius: 8px;
+  margin-bottom: 0.5rem;
+  font-size: 0.9rem;
+}
+
+.comment strong {
+  color: #2c3e50;
+}
+
+.comment small {
+  color: #6c757d;
+  font-size: 0.8rem;
+}
+
+.comment-form {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 0.75rem;
+}
+
+.comment-input {
+  flex: 1;
+  padding: 8px 12px;
+  border: 1px solid #dee2e6;
+  border-radius: 6px;
+  font-size: 0.9rem;
+}
+
+.btn-comment {
+  padding: 8px 16px;
+  background: #3498db;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: background 0.3s;
+}
+
+.btn-comment:hover {
+  background: #2980b9;
+}
+
+.admin-section {
+  background: white;
+  padding: 1.5rem;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.admin-section h3 {
+  margin-top: 0;
+  color: #2c3e50;
+}
+
+.create-user-form {
+  margin-bottom: 2rem;
+  padding: 1.5rem;
+  background: #f8f9fa;
+  border-radius: 8px;
+}
+
+.user-form {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.form-input, .form-select {
+  padding: 10px 12px;
+  border: 1px solid #dee2e6;
+  border-radius: 6px;
+  font-size: 0.95rem;
+}
+
+.form-input {
+  flex: 1;
+  min-width: 200px;
+}
+
+.btn-submit {
+  padding: 10px 20px;
+  background: #2ecc71;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.95rem;
+  font-weight: 500;
+  transition: background 0.3s;
+}
+
+.btn-submit:hover {
+  background: #27ae60;
+}
+
+.users-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 1rem;
+}
+
+.user-card {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem;
+  background: #f8f9fa;
+  border-radius: 8px;
+  border: 1px solid #e9ecef;
+}
+
+.user-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: #3498db;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+}
+
+.user-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background: white;
+  padding: 2rem;
+  border-radius: 12px;
+  max-width: 600px;
+  width: 90%;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
+.modal-header h3 {
+  margin: 0;
+  color: #2c3e50;
+}
+
+.modal-close {
+  background: none;
+  border: none;
+  font-size: 2rem;
+  cursor: pointer;
+  color: #6c757d;
+  line-height: 1;
+  transition: color 0.3s;
+}
+
+.modal-close:hover {
+  color: #e74c3c;
+}
+
+.note-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.form-textarea {
+  padding: 12px;
+  border: 1px solid #dee2e6;
+  border-radius: 6px;
+  font-size: 1rem;
+  min-height: 150px;
+  font-family: inherit;
+  resize: vertical;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 1rem;
+  justify-content: flex-end;
+}
+
+.btn-cancel {
+  padding: 10px 20px;
+  background: #e9ecef;
+  color: #495057;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.95rem;
+  transition: background 0.3s;
+}
+
+.btn-cancel:hover {
+  background: #dee2e6;
+}
 </style>
