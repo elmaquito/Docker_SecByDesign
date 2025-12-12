@@ -241,11 +241,22 @@ api.get('/health', (req: Request, res: Response) => {
 // Auth: Login (Anonymous)
 api.post('/auth/login', async (req: Request, res: Response) => {
   try {
-    const { username, password } = loginSchema.parse(req.body);
+    // Validate request body
+    const parseResult = loginSchema.safeParse(req.body);
+    if (!parseResult.success) {
+      console.log('[Login] Validation error:', parseResult.error.issues);
+      return res.status(400).json({ error: 'Invalid request format' });
+    }
+
+    const { username, password } = parseResult.data;
+    
+    // Query user from database
     const result = await pool.query('SELECT * FROM users WHERE username = $1', [username]);
     const user = result.rows[0];
 
+    // Verify credentials
     if (!user || !(await argon2.verify(user.password_hash, password))) {
+      console.log(`[Login] Authentication failed for user: ${username}`);
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
@@ -260,13 +271,23 @@ api.post('/auth/login', async (req: Request, res: Response) => {
     const refreshTokenData = tokenService.generateRefreshToken();
     
     // Store refresh token in database
-    await tokenService.storeRefreshToken(
-      user.id,
-      refreshTokenData.tokenHash,
-      refreshTokenData.expiresAt,
-      req.headers['user-agent'],
-      req.ip
-    );
+    try {
+      await tokenService.storeRefreshToken(
+        user.id,
+        refreshTokenData.tokenHash,
+        refreshTokenData.expiresAt,
+        req.headers['user-agent'],
+        req.ip
+      );
+    } catch (dbErr: any) {
+      console.error('[Login] Database error storing refresh token:', dbErr);
+      // Check if it's a missing table error
+      if (dbErr.code === '42P01') {
+        console.error('[Login] CRITICAL: sessions table does not exist. Run migrations!');
+        return res.status(500).json({ error: 'Server configuration error. Please contact administrator.' });
+      }
+      throw dbErr; // Re-throw other database errors
+    }
 
     console.log(`[Login] User authenticated: ${user.username} (${user.role})`);
 
@@ -294,9 +315,13 @@ api.post('/auth/login', async (req: Request, res: Response) => {
       user: { id: user.id, username: user.username, role: user.role },
       accessToken // Return in response for client-side use if needed
     });
-  } catch (err) {
-    console.error('Login error:', err);
-    res.status(500).json({ error: 'Internal error' });
+  } catch (err: any) {
+    console.error('[Login] Unexpected error:', err);
+    // Log stack trace for debugging
+    if (err.stack) {
+      console.error('[Login] Stack trace:', err.stack);
+    }
+    res.status(500).json({ error: 'Internal server error' });
   }
 });
 
