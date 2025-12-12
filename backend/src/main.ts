@@ -244,7 +244,7 @@ api.post('/auth/login', async (req: Request, res: Response) => {
     // Validate request body
     const parseResult = loginSchema.safeParse(req.body);
     if (!parseResult.success) {
-      console.log('[Login] Validation error:', parseResult.error.issues);
+      console.error('[Login] Validation error:', parseResult.error.issues);
       return res.status(400).json({ error: 'Invalid request format' });
     }
 
@@ -254,9 +254,9 @@ api.post('/auth/login', async (req: Request, res: Response) => {
     const result = await pool.query('SELECT * FROM users WHERE username = $1', [username]);
     const user = result.rows[0];
 
-    // Verify credentials
+    // Verify credentials (don't log username to prevent user enumeration)
     if (!user || !(await argon2.verify(user.password_hash, password))) {
-      console.log(`[Login] Authentication failed for user: ${username}`);
+      console.warn('[Login] Authentication failed');
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
