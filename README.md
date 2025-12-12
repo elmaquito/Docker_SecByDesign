@@ -65,11 +65,40 @@ npm run dev
 ```
 
 **URLs**:
-- **Frontend**: http://localhost:5173
-- **Backend API**: http://localhost:3000
+- **Frontend**: http://localhost:5173 (or http://127.0.0.1:5173)
+- **Backend API**: http://localhost:3001 (mapped from internal port 3000)
 - **Base de données**: localhost:5432 (User: `user`, Pass: `dev_secret_password`)
 
-### 4. Simuler la Production
+**Note**: The application automatically detects whether you access it via `localhost` or `127.0.0.1` and adjusts API calls accordingly to ensure authentication cookies work correctly. You can override this behavior using environment variables (see `.env.example` files).
+
+### 4. Configuration (Optionnel)
+
+Les variables d'environnement peuvent être configurées pour personnaliser l'application:
+
+**Frontend** (`frontend/.env`):
+```bash
+# Option 1: Full API URL
+VITE_API_URL=http://localhost:3001
+
+# Option 2: Individual components
+VITE_API_HOST=localhost
+VITE_API_PORT=3001
+```
+
+**Backend** (`backend/.env`):
+```bash
+PORT=3000
+DB_HOST=database
+DB_USER=user
+DB_PASSWORD=dev_secret_password
+DB_NAME=notimatic_dev
+JWT_SECRET=your_secure_secret
+CORS_ORIGINS=http://localhost:5173,http://127.0.0.1:5173
+```
+
+Voir les fichiers `.env.example` pour la documentation complète.
+
+### 5. Simuler la Production
 
 Mode production avec Docker Swarm:
 
