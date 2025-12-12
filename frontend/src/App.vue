@@ -27,6 +27,7 @@ import Login from './components/Login.vue'
 import Dashboard from './components/Dashboard.vue'
 import ForgotPassword from './components/ForgotPassword.vue'
 import ResetPassword from './components/ResetPassword.vue'
+import { API_V1_BASE_URL } from './config/api.js'
 
 const user = ref(null)
 const loading = ref(true)
@@ -47,7 +48,7 @@ onMounted(() => {
 // Check if user is already logged in (via cookie)
 const checkAuth = async () => {
   try {
-    const res = await fetch('http://127.0.0.1:3001/api/v1/notes', { 
+    const res = await fetch(`${API_V1_BASE_URL}/notes`, { 
       credentials: 'include'
     })
 
@@ -76,7 +77,7 @@ const handleResetSuccess = () => {
 }
 
 const logout = async () => {
-  await fetch('http://127.0.0.1:3001/api/v1/auth/logout', { method: 'POST', credentials: 'include' })
+  await fetch(`${API_V1_BASE_URL}/auth/logout`, { method: 'POST', credentials: 'include' })
   user.value = null
   localStorage.removeItem('user')
 }

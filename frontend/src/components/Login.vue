@@ -46,6 +46,7 @@
 
 <script setup>
 import { ref, reactive } from 'vue'
+import { API_BASE_URL } from '../config/api.js'
 
 const emit = defineEmits(['login-success', 'forgot-password'])
 
@@ -77,7 +78,7 @@ const submit = async () => {
   const endpoint = isSetup.value ? '/api/v1/setup' : '/api/v1/auth/login'
   
   try {
-    const res = await fetch(`http://127.0.0.1:3001${endpoint}`, {
+    const res = await fetch(`${API_BASE_URL}${endpoint}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(form),

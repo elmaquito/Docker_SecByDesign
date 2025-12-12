@@ -11,6 +11,9 @@ import crypto from 'crypto';
 // --- Configuration ---
 const PORT = process.env.PORT || 3000;
 const JWT_SECRET = process.env.JWT_SECRET || 'dev_jwt_secret_change_me';
+const CORS_ORIGINS = process.env.CORS_ORIGINS 
+  ? process.env.CORS_ORIGINS.split(',').map(o => o.trim())
+  : ['http://localhost:5173', 'http://127.0.0.1:5173'];
 const DB_CONFIG = {
   host: process.env.DB_HOST || 'database',
   user: process.env.DB_USER || 'user',
@@ -96,22 +99,38 @@ app.use(helmet({
 }));
 
 app.use(cors({
-  origin: ['http://localhost:5173', 'http://127.0.0.1:5173'],
+  origin: CORS_ORIGINS,
   credentials: true,
 }));
 app.use(express.json());
 app.use(cookieParser());
+
+console.log(`[CORS] Allowed origins: ${CORS_ORIGINS.join(', ')}`);
 
 // --- Middleware ---
 
 // 1. Authenticate (Verify JWT)
 const authenticateToken = (req: any, res: Response, next: NextFunction) => {
   const token = req.cookies['auth_token'];
-  if (!token) return res.status(401).json({ error: 'Unauthorized' });
+  
+  // Enhanced logging for debugging
+  console.log(`[Auth] ${req.method} ${req.path}`);
+  console.log(`[Auth] Origin: ${req.headers.origin}`);
+  console.log(`[Auth] Cookie header: ${req.headers.cookie ? 'present' : 'missing'}`);
+  console.log(`[Auth] Token found: ${token ? 'yes' : 'no'}`);
+  
+  if (!token) {
+    console.log('[Auth] FAILED: No token in cookies');
+    return res.status(401).json({ error: 'Unauthorized: No authentication token' });
+  }
 
   jwt.verify(token, JWT_SECRET, (err: any, user: any) => {
-    if (err) return res.status(403).json({ error: 'Forbidden' });
+    if (err) {
+      console.log(`[Auth] FAILED: JWT verification error - ${err.message}`);
+      return res.status(403).json({ error: 'Forbidden: Invalid token' });
+    }
     req.user = user;
+    console.log(`[Auth] SUCCESS: User ${user.username} (${user.role})`);
     next();
   });
 };
@@ -119,10 +138,16 @@ const authenticateToken = (req: any, res: Response, next: NextFunction) => {
 // 2. Authorize (Check Roles)
 const authorize = (allowedRoles: Role[]) => {
   return (req: any, res: Response, next: NextFunction) => {
-    if (!req.user) return res.status(401).json({ error: 'Unauthorized' });
+    if (!req.user) {
+      console.log('[Authorize] FAILED: No user in request');
+      return res.status(401).json({ error: 'Unauthorized: No user context' });
+    }
+    console.log(`[Authorize] User role: ${req.user.role}, Allowed roles: ${allowedRoles.join(', ')}`);
     if (allowedRoles.includes(req.user.role)) {
+      console.log('[Authorize] SUCCESS: Role authorized');
       next();
     } else {
+      console.log('[Authorize] FAILED: Role not in allowed list');
       res.status(403).json({ error: 'Forbidden: Insufficient permissions' });
     }
   };
@@ -160,6 +185,7 @@ api.post('/auth/login', async (req: Request, res: Response) => {
       { expiresIn: '15m' }
     );
 
+    console.log(`[Login] Setting auth cookie for user: ${user.username} (${user.role})`);
     res.cookie('auth_token', token, {
       httpOnly: true,
       secure: false,

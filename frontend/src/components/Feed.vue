@@ -61,6 +61,7 @@
 import { ref, computed, onMounted } from 'vue'
 import NoteCard from './NoteCard.vue'
 import { getThemeColor } from '../utils/theme.js'
+import { API_V1_BASE_URL } from '../config/api.js'
 
 const props = defineProps(['user'])
 const emit = defineEmits(['view-note'])
@@ -77,7 +78,7 @@ const availableCategories = ref([])
 const fetchNotes = async () => {
   loading.value = true
   try {
-    const res = await fetch('http://127.0.0.1:3001/api/v1/notes', { credentials: 'include' })
+    const res = await fetch(`${API_V1_BASE_URL}/notes`, { credentials: 'include' })
     if (res.ok) {
       notes.value = await res.json()
     }
@@ -90,7 +91,7 @@ const fetchNotes = async () => {
 
 const fetchThemes = async () => {
   try {
-    const res = await fetch('http://127.0.0.1:3001/api/v1/themes', { credentials: 'include' })
+    const res = await fetch(`${API_V1_BASE_URL}/themes`, { credentials: 'include' })
     if (res.ok) {
       availableThemes.value = await res.json()
     }
@@ -101,7 +102,7 @@ const fetchThemes = async () => {
 
 const fetchCategories = async () => {
   try {
-    const res = await fetch('http://127.0.0.1:3001/api/v1/categories', { credentials: 'include' })
+    const res = await fetch(`${API_V1_BASE_URL}/categories`, { credentials: 'include' })
     if (res.ok) {
       availableCategories.value = await res.json()
     }

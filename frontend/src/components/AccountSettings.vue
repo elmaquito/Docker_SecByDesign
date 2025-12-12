@@ -100,6 +100,7 @@
 
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
+import { API_V1_BASE_URL } from '../config/api.js'
 
 const props = defineProps({
   user: {
@@ -124,7 +125,7 @@ const form = reactive({
 
 const fetchAccountInfo = async () => {
   try {
-    const res = await fetch('http://127.0.0.1:3001/api/v1/account', {
+    const res = await fetch(`${API_V1_BASE_URL}/account`, {
       credentials: 'include'
     })
     
@@ -175,7 +176,7 @@ const updateAccount = async () => {
       return
     }
     
-    const res = await fetch('http://127.0.0.1:3001/api/v1/account', {
+    const res = await fetch(`${API_V1_BASE_URL}/account`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',

@@ -22,6 +22,7 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
+import { API_V1_BASE_URL } from '../config/api.js'
 
 const props = defineProps({
   noteId: {
@@ -45,7 +46,7 @@ const downCount = ref(props.initialDownCount)
 // Fetch user's current reaction
 const fetchUserReaction = async () => {
   try {
-    const res = await fetch(`http://127.0.0.1:3001/api/v1/notes/${props.noteId}/reactions/me`, {
+    const res = await fetch(`${API_V1_BASE_URL}/notes/${props.noteId}/reactions/me`, {
       credentials: 'include'
     })
     
@@ -86,7 +87,7 @@ const toggleReaction = async (type) => {
   }
   
   try {
-    const res = await fetch(`http://127.0.0.1:3001/api/v1/notes/${props.noteId}/reactions`, {
+    const res = await fetch(`${API_V1_BASE_URL}/notes/${props.noteId}/reactions`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
