@@ -7,10 +7,13 @@ import argon2 from 'argon2';
 import jwt from 'jsonwebtoken';
 import { z } from 'zod';
 import crypto from 'crypto';
+import { TokenService } from './auth/token.service';
 
 // --- Configuration ---
 const PORT = process.env.PORT || 3000;
+const NODE_ENV = process.env.NODE_ENV || 'development';
 const JWT_SECRET = process.env.JWT_SECRET || 'dev_jwt_secret_change_me';
+const REFRESH_TOKEN_SECRET = process.env.REFRESH_TOKEN_SECRET || 'dev_refresh_secret_change_me';
 const CORS_ORIGINS = process.env.CORS_ORIGINS 
   ? process.env.CORS_ORIGINS.split(',').map(o => o.trim())
   : ['http://localhost:5173', 'http://127.0.0.1:5173'];
@@ -23,6 +26,9 @@ const DB_CONFIG = {
 
 // --- Database ---
 const pool = new Pool(DB_CONFIG);
+
+// --- Token Service ---
+const tokenService = new TokenService(JWT_SECRET, REFRESH_TOKEN_SECRET, pool);
 
 // --- Types ---
 type Role = 'admin' | 'technician' | 'teacher' | 'student';
@@ -94,9 +100,21 @@ const sendEmail = async (to: string, subject: string, body: string) => {
 // --- App Setup ---
 const app = express();
 
-app.use(helmet({
+// Helmet configuration with HSTS for production
+const helmetConfig: any = {
   crossOriginResourcePolicy: { policy: "cross-origin" },
-}));
+};
+
+// Enable HSTS in production
+if (NODE_ENV === 'production') {
+  helmetConfig.hsts = {
+    maxAge: 31536000, // 1 year
+    includeSubDomains: true,
+    preload: true
+  };
+}
+
+app.use(helmet(helmetConfig));
 
 app.use(cors({
   origin: CORS_ORIGINS,
@@ -109,30 +127,82 @@ console.log(`[CORS] Allowed origins: ${CORS_ORIGINS.join(', ')}`);
 
 // --- Middleware ---
 
-// 1. Authenticate (Verify JWT)
-const authenticateToken = (req: any, res: Response, next: NextFunction) => {
-  const token = req.cookies['auth_token'];
+// 1. Authenticate (Verify JWT with auto-refresh)
+const authenticateToken = async (req: any, res: Response, next: NextFunction) => {
+  const accessToken = req.cookies['auth_token'];
+  const refreshToken = req.cookies['refresh_token'];
   
   // Enhanced logging for debugging
   console.log(`[Auth] ${req.method} ${req.path}`);
   console.log(`[Auth] Origin: ${req.headers.origin}`);
   console.log(`[Auth] Cookie header: ${req.headers.cookie ? 'present' : 'missing'}`);
-  console.log(`[Auth] Token found: ${token ? 'yes' : 'no'}`);
+  console.log(`[Auth] Access token found: ${accessToken ? 'yes' : 'no'}`);
+  console.log(`[Auth] Refresh token found: ${refreshToken ? 'yes' : 'no'}`);
   
-  if (!token) {
-    console.log('[Auth] FAILED: No token in cookies');
-    return res.status(401).json({ error: 'Unauthorized: No authentication token' });
-  }
-
-  jwt.verify(token, JWT_SECRET, (err: any, user: any) => {
-    if (err) {
-      console.log(`[Auth] FAILED: JWT verification error - ${err.message}`);
-      return res.status(403).json({ error: 'Forbidden: Invalid token' });
+  // Try to verify access token first
+  if (accessToken) {
+    const verified = tokenService.verifyAccessToken(accessToken);
+    if (verified) {
+      req.user = verified;
+      console.log(`[Auth] SUCCESS: User ${verified.username} (${verified.role})`);
+      return next();
     }
-    req.user = user;
-    console.log(`[Auth] SUCCESS: User ${user.username} (${user.role})`);
-    next();
-  });
+    console.log('[Auth] Access token invalid or expired');
+  }
+  
+  // If no access token or it's invalid, try to refresh using refresh token
+  if (refreshToken) {
+    console.log('[Auth] Attempting to refresh access token');
+    try {
+      // Validate refresh token
+      const validation = await tokenService.validateRefreshToken(refreshToken);
+      if (!validation) {
+        console.log('[Auth] FAILED: Invalid refresh token');
+        return res.status(401).json({ error: 'Unauthorized: Session expired, please login again' });
+      }
+
+      // Get user data
+      const userResult = await pool.query(
+        'SELECT id, username, role FROM users WHERE id = $1',
+        [validation.userId]
+      );
+
+      if (userResult.rows.length === 0) {
+        console.log('[Auth] FAILED: User not found');
+        return res.status(401).json({ error: 'Unauthorized: User not found' });
+      }
+
+      const user = userResult.rows[0];
+
+      // Generate new access token (don't rotate refresh token on every request - only on explicit refresh)
+      const newAccessToken = tokenService.generateAccessToken({
+        id: user.id,
+        username: user.username,
+        role: user.role
+      });
+
+      const isProduction = NODE_ENV === 'production';
+
+      // Set new access token cookie
+      res.cookie('auth_token', newAccessToken, {
+        httpOnly: true,
+        secure: isProduction,
+        sameSite: isProduction ? 'none' : 'lax',
+        maxAge: 15 * 60 * 1000 // 15 minutes
+      });
+
+      req.user = { id: user.id, username: user.username, role: user.role };
+      console.log(`[Auth] SUCCESS: Token auto-refreshed for user ${user.username} (${user.role})`);
+      return next();
+    } catch (err) {
+      console.error('[Auth] Refresh error:', err);
+      return res.status(401).json({ error: 'Unauthorized: Session error' });
+    }
+  }
+  
+  // No valid tokens found
+  console.log('[Auth] FAILED: No valid tokens');
+  return res.status(401).json({ error: 'Unauthorized: No authentication token' });
 };
 
 // 2. Authorize (Check Roles)
@@ -179,30 +249,169 @@ api.post('/auth/login', async (req: Request, res: Response) => {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
-    const token = jwt.sign(
-      { id: user.id, username: user.username, role: user.role }, 
-      JWT_SECRET, 
-      { expiresIn: '15m' }
-    );
-
-    console.log(`[Login] Setting auth cookie for user: ${user.username} (${user.role})`);
-    res.cookie('auth_token', token, {
-      httpOnly: true,
-      secure: false,
-      sameSite: 'lax',
-      maxAge: 15 * 60 * 1000
+    // Generate access token (short-lived JWT)
+    const accessToken = tokenService.generateAccessToken({
+      id: user.id,
+      username: user.username,
+      role: user.role
     });
 
-    res.json({ message: 'Logged in', user: { id: user.id, username: user.username, role: user.role } });
+    // Generate refresh token (long-lived opaque token)
+    const refreshTokenData = tokenService.generateRefreshToken();
+    
+    // Store refresh token in database
+    await tokenService.storeRefreshToken(
+      user.id,
+      refreshTokenData.tokenHash,
+      refreshTokenData.expiresAt,
+      req.headers['user-agent'],
+      req.ip
+    );
+
+    console.log(`[Login] User authenticated: ${user.username} (${user.role})`);
+
+    // Cookie settings based on environment
+    const isProduction = NODE_ENV === 'production';
+    
+    // Set access token cookie (short-lived)
+    res.cookie('auth_token', accessToken, {
+      httpOnly: true,
+      secure: isProduction,
+      sameSite: isProduction ? 'none' : 'lax',
+      maxAge: 15 * 60 * 1000 // 15 minutes
+    });
+
+    // Set refresh token cookie (long-lived)
+    res.cookie('refresh_token', refreshTokenData.token, {
+      httpOnly: true,
+      secure: isProduction,
+      sameSite: isProduction ? 'none' : 'lax',
+      maxAge: 30 * 24 * 60 * 60 * 1000 // 30 days
+    });
+
+    res.json({ 
+      message: 'Logged in', 
+      user: { id: user.id, username: user.username, role: user.role },
+      accessToken // Return in response for client-side use if needed
+    });
   } catch (err) {
+    console.error('Login error:', err);
     res.status(500).json({ error: 'Internal error' });
   }
 });
 
 // Auth: Logout (Authenticated)
-api.post('/auth/logout', authenticateToken, (req: Request, res: Response) => {
-  res.clearCookie('auth_token');
-  res.json({ message: 'Logged out' });
+api.post('/auth/logout', authenticateToken, async (req: any, res: Response) => {
+  try {
+    const refreshToken = req.cookies['refresh_token'];
+    
+    // Revoke refresh token if present
+    if (refreshToken) {
+      await tokenService.revokeSession(refreshToken);
+    }
+    
+    // Clear cookies
+    res.clearCookie('auth_token');
+    res.clearCookie('refresh_token');
+    
+    console.log(`[Logout] User logged out: ${req.user.username}`);
+    res.json({ message: 'Logged out' });
+  } catch (err) {
+    console.error('Logout error:', err);
+    res.status(500).json({ error: 'Internal error' });
+  }
+});
+
+// Auth: Refresh Token (Anonymous - uses refresh token cookie)
+api.post('/auth/refresh', async (req: Request, res: Response) => {
+  try {
+    const oldRefreshToken = req.cookies['refresh_token'];
+    
+    if (!oldRefreshToken) {
+      return res.status(401).json({ error: 'No refresh token provided' });
+    }
+
+    // Rotate refresh token (validates, revokes old, creates new)
+    const newRefreshTokenData = await tokenService.rotateRefreshToken(
+      oldRefreshToken,
+      req.headers['user-agent'],
+      req.ip
+    );
+
+    if (!newRefreshTokenData) {
+      console.log('[Refresh] Failed: Invalid or expired refresh token');
+      return res.status(403).json({ error: 'Invalid or expired refresh token' });
+    }
+
+    // Get user data for new access token
+    const validation = await tokenService.validateRefreshToken(newRefreshTokenData.token);
+    if (!validation) {
+      return res.status(403).json({ error: 'Token validation failed' });
+    }
+
+    const userResult = await pool.query(
+      'SELECT id, username, role FROM users WHERE id = $1',
+      [validation.userId]
+    );
+
+    if (userResult.rows.length === 0) {
+      return res.status(403).json({ error: 'User not found' });
+    }
+
+    const user = userResult.rows[0];
+
+    // Generate new access token
+    const newAccessToken = tokenService.generateAccessToken({
+      id: user.id,
+      username: user.username,
+      role: user.role
+    });
+
+    const isProduction = NODE_ENV === 'production';
+
+    // Set new access token cookie
+    res.cookie('auth_token', newAccessToken, {
+      httpOnly: true,
+      secure: isProduction,
+      sameSite: isProduction ? 'none' : 'lax',
+      maxAge: 15 * 60 * 1000 // 15 minutes
+    });
+
+    // Set new refresh token cookie
+    res.cookie('refresh_token', newRefreshTokenData.token, {
+      httpOnly: true,
+      secure: isProduction,
+      sameSite: isProduction ? 'none' : 'lax',
+      maxAge: 30 * 24 * 60 * 60 * 1000 // 30 days
+    });
+
+    console.log(`[Refresh] Token rotated for user: ${user.username}`);
+    res.json({ 
+      message: 'Token refreshed',
+      accessToken: newAccessToken,
+      user: { id: user.id, username: user.username, role: user.role }
+    });
+  } catch (err) {
+    console.error('Refresh token error:', err);
+    res.status(500).json({ error: 'Internal error' });
+  }
+});
+
+// Auth: Revoke (Authenticated - revoke all sessions)
+api.post('/auth/revoke', authenticateToken, async (req: any, res: Response) => {
+  try {
+    await tokenService.revokeAllUserSessions(req.user.id);
+    
+    // Clear cookies
+    res.clearCookie('auth_token');
+    res.clearCookie('refresh_token');
+    
+    console.log(`[Revoke] All sessions revoked for user: ${req.user.username}`);
+    res.json({ message: 'All sessions revoked' });
+  } catch (err) {
+    console.error('Revoke error:', err);
+    res.status(500).json({ error: 'Internal error' });
+  }
 });
 
 // Auth: Password Reset Request
