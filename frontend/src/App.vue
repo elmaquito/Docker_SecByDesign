@@ -81,7 +81,6 @@ const logout = async () => {
   localStorage.removeItem('user')
 }
 </script>
-</script>
 
 <style>
 * {
