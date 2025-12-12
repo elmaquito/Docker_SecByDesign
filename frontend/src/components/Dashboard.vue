@@ -14,6 +14,9 @@
       <button v-if="canManageUsers" @click="activeView = 'admin'" :class="{ active: activeView === 'admin' }" class="action-btn">
         👥 Gestion Utilisateurs
       </button>
+      <button @click="activeView = 'account'" :class="{ active: activeView === 'account' }" class="action-btn">
+        ⚙️ Mon Compte
+      </button>
     </div>
 
     <!-- User Profile Info -->
@@ -63,7 +66,9 @@
             </div>
             <div class="note-actions">
               <button v-if="canEdit(note) && !note._editing" @click="startEdit(note)" class="btn-icon">✏️</button>
-              <button v-if="note._editing" @click="saveEdit(note)" class="btn-icon">💾</button>
+              <button v-if="note._editing" @click="saveEdit(note)" :disabled="note._saving" class="btn-icon">
+                {{ note._saving ? '⏳' : '💾' }}
+              </button>
               <button v-if="note._editing" @click="cancelEdit(note)" class="btn-icon">❌</button>
               <button @click="deleteNote(note.id)" class="btn-icon delete">🗑️</button>
             </div>
@@ -130,6 +135,11 @@
       </div>
     </div>
 
+    <!-- Account Settings View -->
+    <div v-else-if="activeView === 'account'" class="view-container">
+      <AccountSettings :user="user" @close="activeView = 'feed'" @updated="activeView = 'feed'" />
+    </div>
+
     <!-- Create Note Modal -->
     <div v-if="showCreateModal" class="modal-overlay" @click="showCreateModal = false">
       <div class="modal-content" @click.stop>
@@ -142,8 +152,11 @@
           <textarea v-model="newNote.content" placeholder="Contenu de la note (chiffré en transit)" required class="form-textarea"></textarea>
           <div class="modal-actions">
             <button type="button" @click="showCreateModal = false" class="btn-cancel">Annuler</button>
-            <button type="submit" class="btn-submit">Enregistrer</button>
+            <button type="submit" :disabled="isSaving" class="btn-submit">
+              {{ isSaving ? 'Enregistrement...' : 'Enregistrer' }}
+            </button>
           </div>
+          <div v-if="saveError" class="error-message">{{ saveError }}</div>
         </form>
       </div>
     </div>
@@ -153,6 +166,7 @@
 <script setup>
 import { ref, reactive, onMounted, computed } from 'vue'
 import Feed from './Feed.vue'
+import AccountSettings from './AccountSettings.vue'
 import { initializeNoteState } from '../utils/theme.js'
 
 const props = defineProps(['user'])
@@ -162,6 +176,8 @@ const newNote = reactive({ title: '', content: '' })
 const newUser = reactive({ username: '', password: '', role: 'student' })
 const activeView = ref('feed')
 const showCreateModal = ref(false)
+const isSaving = ref(false)
+const saveError = ref('')
 
 const canManageUsers = computed(() => ['admin', 'technician'].includes(props.user.role))
 const totalComments = computed(() => {
@@ -237,6 +253,9 @@ const fetchNotes = async () => {
 }
 
 const createNote = async () => {
+  isSaving.value = true
+  saveError.value = ''
+  
   try {
     const res = await fetch('http://127.0.0.1:3001/api/v1/notes', {
       method: 'POST',
@@ -254,10 +273,14 @@ const createNote = async () => {
       activeView.value = 'my-notes'
     } else {
       const data = await res.json()
+      saveError.value = data.error || 'Erreur lors de l\'enregistrement'
       console.error('Échec de l\'enregistrement:', data.error || 'Erreur inconnue')
     }
   } catch (e) {
+    saveError.value = 'Erreur de connexion au serveur'
     console.error('Échec de l\'enregistrement de la note:', e)
+  } finally {
+    isSaving.value = false
   }
 }
 
@@ -298,6 +321,11 @@ const cancelEdit = (note) => {
 }
 
 const saveEdit = async (note) => {
+  if (note._saving) return // Prevent double-submit
+  
+  note._saving = true
+  note._saveError = ''
+  
   try {
     const res = await fetch(`http://127.0.0.1:3001/api/v1/notes/${note.id}`, {
       method: 'PATCH',
@@ -312,10 +340,14 @@ const saveEdit = async (note) => {
       note._editing = false
     } else {
       const data = await res.json()
-      alert(data.error || 'Failed to save')
+      note._saveError = data.error || 'Échec de l\'enregistrement'
+      alert(note._saveError)
     }
   } catch (e) {
-    alert('Failed to save')
+    note._saveError = 'Erreur de connexion au serveur'
+    alert(note._saveError)
+  } finally {
+    note._saving = false
   }
 }
 
@@ -852,5 +884,30 @@ onMounted(() => {
 
 .btn-cancel:hover {
   background: #dee2e6;
+}
+
+.btn-submit:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+.btn-submit:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.error-message {
+  margin-top: 12px;
+  padding: 10px;
+  background: #fee;
+  border-left: 3px solid #f44;
+  color: #c33;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.btn-icon:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 </style>

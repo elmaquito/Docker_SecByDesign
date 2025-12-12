@@ -30,6 +30,12 @@
       </button>
     </form>
 
+    <p v-if="!isSetup" class="forgot-password">
+      <a href="#" @click.prevent="$emit('forgot-password')">
+        Mot de passe oublié ?
+      </a>
+    </p>
+
     <p class="toggle-mode">
       <a href="#" @click.prevent="toggleMode">
         {{ isSetup ? 'Back to Login' : 'First time? Run Setup' }}
@@ -41,7 +47,7 @@
 <script setup>
 import { ref, reactive } from 'vue'
 
-const emit = defineEmits(['login-success'])
+const emit = defineEmits(['login-success', 'forgot-password'])
 
 const isSetup = ref(false)
 const submitting = ref(false)
@@ -107,4 +113,7 @@ button:disabled { opacity: 0.7; }
 .success { color: green; margin-bottom: 1rem; font-size: 0.9rem; }
 .info-box { background: #e3f2fd; padding: 10px; margin-bottom: 10px; border-radius: 4px; color: #0d47a1; font-size: 0.9rem; }
 .toggle-mode { text-align: center; margin-top: 1rem; font-size: 0.9rem; }
+.forgot-password { text-align: center; margin-top: 0.75rem; font-size: 0.9rem; }
+.forgot-password a { color: #667eea; text-decoration: none; }
+.forgot-password a:hover { text-decoration: underline; }
 </style>
