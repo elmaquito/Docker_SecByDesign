@@ -29,8 +29,7 @@ Bienvenue dans le projet **Notimatic**. Ce dépôt contient l'architecture et l'
 Avant de lancer l'application, appliquer les migrations SQL:
 
 ```bash
-cd backend
-./migrate.sh
+.\backend\migrate.ps1
 ```
 
 Cela créera les tables nécessaires:
