@@ -9,7 +9,9 @@
       <div v-if="loading" class="loading">Loading...</div>
       
       <div v-else-if="!user">
-        <Login @login-success="handleLogin" />
+        <ForgotPassword v-if="showForgotPassword" @back="showForgotPassword = false" />
+        <ResetPassword v-else-if="showResetPassword" @success="handleResetSuccess" />
+        <Login v-else @login-success="handleLogin" @forgot-password="showForgotPassword = true" />
       </div>
 
       <div v-else>
@@ -23,9 +25,24 @@
 import { ref, onMounted } from 'vue'
 import Login from './components/Login.vue'
 import Dashboard from './components/Dashboard.vue'
+import ForgotPassword from './components/ForgotPassword.vue'
+import ResetPassword from './components/ResetPassword.vue'
 
 const user = ref(null)
 const loading = ref(true)
+const showForgotPassword = ref(false)
+const showResetPassword = ref(false)
+
+// Check if this is a password reset URL
+onMounted(() => {
+  const params = new URLSearchParams(window.location.search)
+  if (params.get('token')) {
+    showResetPassword.value = true
+    loading.value = false
+  } else {
+    checkAuth()
+  }
+})
 
 // Check if user is already logged in (via cookie)
 const checkAuth = async () => {
@@ -52,15 +69,17 @@ const handleLogin = (userData) => {
   localStorage.setItem('user', JSON.stringify(userData))
 }
 
+const handleResetSuccess = () => {
+  showResetPassword.value = false
+  // Clear URL params
+  window.history.pushState({}, '', '/')
+}
+
 const logout = async () => {
   await fetch('http://127.0.0.1:3001/api/v1/auth/logout', { method: 'POST', credentials: 'include' })
   user.value = null
   localStorage.removeItem('user')
 }
-
-onMounted(() => {
-  checkAuth()
-})
 </script>
 
 <style>

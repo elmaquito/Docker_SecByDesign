@@ -31,6 +31,11 @@
 
     <div class="note-footer">
       <div class="note-stats">
+        <Reactions 
+          :noteId="note.id" 
+          :initialUpCount="note.reactions_up || 0"
+          :initialDownCount="note.reactions_down || 0"
+        />
         <span class="stat">💬 {{ note.comment_count || 0 }} commentaire(s)</span>
         <span class="stat">👁️ {{ note.view_count || 0 }} vue(s)</span>
       </div>
@@ -49,6 +54,7 @@
 <script setup>
 import { computed } from 'vue'
 import { getThemeColor } from '../utils/theme.js'
+import Reactions from './Reactions.vue'
 
 const props = defineProps({
   note: {
