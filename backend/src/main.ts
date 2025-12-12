@@ -127,30 +127,82 @@ console.log(`[CORS] Allowed origins: ${CORS_ORIGINS.join(', ')}`);
 
 // --- Middleware ---
 
-// 1. Authenticate (Verify JWT)
-const authenticateToken = (req: any, res: Response, next: NextFunction) => {
-  const token = req.cookies['auth_token'];
+// 1. Authenticate (Verify JWT with auto-refresh)
+const authenticateToken = async (req: any, res: Response, next: NextFunction) => {
+  const accessToken = req.cookies['auth_token'];
+  const refreshToken = req.cookies['refresh_token'];
   
   // Enhanced logging for debugging
   console.log(`[Auth] ${req.method} ${req.path}`);
   console.log(`[Auth] Origin: ${req.headers.origin}`);
   console.log(`[Auth] Cookie header: ${req.headers.cookie ? 'present' : 'missing'}`);
-  console.log(`[Auth] Token found: ${token ? 'yes' : 'no'}`);
+  console.log(`[Auth] Access token found: ${accessToken ? 'yes' : 'no'}`);
+  console.log(`[Auth] Refresh token found: ${refreshToken ? 'yes' : 'no'}`);
   
-  if (!token) {
-    console.log('[Auth] FAILED: No token in cookies');
-    return res.status(401).json({ error: 'Unauthorized: No authentication token' });
-  }
-
-  jwt.verify(token, JWT_SECRET, (err: any, user: any) => {
-    if (err) {
-      console.log(`[Auth] FAILED: JWT verification error - ${err.message}`);
-      return res.status(403).json({ error: 'Forbidden: Invalid token' });
+  // Try to verify access token first
+  if (accessToken) {
+    const verified = tokenService.verifyAccessToken(accessToken);
+    if (verified) {
+      req.user = verified;
+      console.log(`[Auth] SUCCESS: User ${verified.username} (${verified.role})`);
+      return next();
     }
-    req.user = user;
-    console.log(`[Auth] SUCCESS: User ${user.username} (${user.role})`);
-    next();
-  });
+    console.log('[Auth] Access token invalid or expired');
+  }
+  
+  // If no access token or it's invalid, try to refresh using refresh token
+  if (refreshToken) {
+    console.log('[Auth] Attempting to refresh access token');
+    try {
+      // Validate refresh token
+      const validation = await tokenService.validateRefreshToken(refreshToken);
+      if (!validation) {
+        console.log('[Auth] FAILED: Invalid refresh token');
+        return res.status(401).json({ error: 'Unauthorized: Session expired, please login again' });
+      }
+
+      // Get user data
+      const userResult = await pool.query(
+        'SELECT id, username, role FROM users WHERE id = $1',
+        [validation.userId]
+      );
+
+      if (userResult.rows.length === 0) {
+        console.log('[Auth] FAILED: User not found');
+        return res.status(401).json({ error: 'Unauthorized: User not found' });
+      }
+
+      const user = userResult.rows[0];
+
+      // Generate new access token (don't rotate refresh token on every request - only on explicit refresh)
+      const newAccessToken = tokenService.generateAccessToken({
+        id: user.id,
+        username: user.username,
+        role: user.role
+      });
+
+      const isProduction = NODE_ENV === 'production';
+
+      // Set new access token cookie
+      res.cookie('auth_token', newAccessToken, {
+        httpOnly: true,
+        secure: isProduction,
+        sameSite: isProduction ? 'none' : 'lax',
+        maxAge: 15 * 60 * 1000 // 15 minutes
+      });
+
+      req.user = { id: user.id, username: user.username, role: user.role };
+      console.log(`[Auth] SUCCESS: Token auto-refreshed for user ${user.username} (${user.role})`);
+      return next();
+    } catch (err) {
+      console.error('[Auth] Refresh error:', err);
+      return res.status(401).json({ error: 'Unauthorized: Session error' });
+    }
+  }
+  
+  // No valid tokens found
+  console.log('[Auth] FAILED: No valid tokens');
+  return res.status(401).json({ error: 'Unauthorized: No authentication token' });
 };
 
 // 2. Authorize (Check Roles)
