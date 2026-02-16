@@ -1,12 +1,13 @@
 # syntax=docker/dockerfile:1
 
 # --- Stage 1: Builder ---
-FROM node:18-alpine AS builder
+FROM node:18-bullseye AS builder
 
 WORKDIR /app
 
 # Install build tools for native modules (argon2)
-RUN apk add --no-cache python3 make g++
+# node:18-bullseye includes python3, make, g++ but run update to be safe and ensure deps
+RUN apt-get update && apt-get install -y python3 make g++
 
 # Copy package files first for caching
 COPY package*.json ./

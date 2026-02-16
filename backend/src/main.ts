@@ -8,6 +8,9 @@ import jwt from 'jsonwebtoken';
 import { z } from 'zod';
 import crypto from 'crypto';
 import { TokenService } from './auth/token.service';
+import { createProfileRouter } from './profiles/profile.routes';
+import { createThemeRouter } from './themes/theme.routes';
+import { createCategoryRouter } from './categories/category.routes';
 
 // --- Configuration ---
 const PORT = process.env.PORT || 3000;
@@ -232,6 +235,11 @@ const isOwner = (resourceUserId: number, currentUserId: number) => {
 
 // --- Routes (API v1) ---
 const api = express.Router();
+
+// Mount modules
+api.use('/profiles', createProfileRouter(pool, authenticateToken));
+api.use('/themes', createThemeRouter(pool, authenticateToken, authorize));
+api.use('/categories', createCategoryRouter(pool, authenticateToken, authorize));
 
 // Health
 api.get('/health', (req: Request, res: Response) => {

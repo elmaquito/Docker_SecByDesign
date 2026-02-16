@@ -68,6 +68,7 @@ services:
       - DB_HOST=database
       - DB_USER=notimatic_user
       - DB_PASSWORD_FILE=/run/secrets/db_password
+      - DB_NAME=notimatic_db
       - NODE_ENV=production
     security_opt:
       - no-new-privileges:true
