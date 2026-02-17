@@ -1,33 +1,35 @@
 import crypto from 'crypto';
 import jwt from 'jsonwebtoken';
 import { Pool } from 'pg';
+import { JWT_SECRET, REFRESH_TOKEN_SECRET } from '../config/env';
+import { pool } from '../config/database';
 
 export interface TokenPayload {
-  id: number;
-  username: string;
-  role: string;
+    id: number;
+    username: string;
+    role: string;
 }
 
 export interface RefreshTokenData {
-  token: string;
-  tokenHash: string;
-  expiresAt: Date;
+    token: string;
+    tokenHash: string;
+    expiresAt: Date;
 }
 
 export class TokenService {
-  private jwtSecret: string;
-  private refreshTokenSecret: string;
-  private pool: Pool;
-  
-  // Token TTLs
-  private readonly ACCESS_TOKEN_TTL = '15m'; // 15 minutes
-  private readonly REFRESH_TOKEN_TTL_DAYS = 30; // 30 days
+    private jwtSecret: string;
+    private refreshTokenSecret: string;
+    private pool: Pool;
 
-  constructor(jwtSecret: string, refreshTokenSecret: string, pool: Pool) {
-    this.jwtSecret = jwtSecret;
-    this.refreshTokenSecret = refreshTokenSecret;
-    this.pool = pool;
-  }
+    // Token TTLs
+    private readonly ACCESS_TOKEN_TTL = '15m'; // 15 minutes
+    private readonly REFRESH_TOKEN_TTL_DAYS = 30; // 30 days
+
+    constructor(jwtSecret?: string, refreshTokenSecret?: string, poolInstance?: Pool) {
+        this.jwtSecret = jwtSecret || JWT_SECRET;
+        this.refreshTokenSecret = refreshTokenSecret || REFRESH_TOKEN_SECRET;
+        this.pool = poolInstance || pool;
+    }
 
   /**
    * Generate JWT access token (short-lived)

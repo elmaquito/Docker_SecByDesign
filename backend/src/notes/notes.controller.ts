@@ -1,0 +1,286 @@
+import { Request, Response } from 'express';
+import { z } from 'zod';
+import { pool } from '../config/database';
+import { NoteCreateSchema, NoteUpdateSchema } from './notes.schema';
+
+export const listNotes = async (req: any, res: Response) => {
+  try {
+    let query: string;
+    let params: any[] = [];
+    const role = req.user.role;
+    const userId = req.user.id;
+
+    if (role === 'admin' || role === 'technician') {
+      // For Admin/Technician, we want ALL notes.
+      query = `
+        SELECT n.*, u.role AS owner_role, u.username as owner_username,
+               t.id as theme_id, t.name as theme_name, t.color as theme_color,
+               c.id as category_id, c.name as category_name
+        FROM notes n 
+        JOIN users u ON n.user_id = u.id 
+        LEFT JOIN note_themes nt ON n.id = nt.note_id
+        LEFT JOIN themes t ON nt.theme_id = t.id
+        LEFT JOIN note_categories nc ON n.id = nc.note_id
+        LEFT JOIN categories c ON nc.category_id = c.id
+        ORDER BY n.created_at DESC
+      `;
+    } else if (role === 'teacher') {
+      // Teacher can see student notes (public or not? legacy said student role) + own notes
+      query = `
+        SELECT n.*, u.role AS owner_role, u.username as owner_username,
+               t.id as theme_id, t.name as theme_name, t.color as theme_color,
+               c.id as category_id, c.name as category_name
+        FROM notes n 
+        JOIN users u ON n.user_id = u.id 
+        LEFT JOIN note_themes nt ON n.id = nt.note_id
+        LEFT JOIN themes t ON nt.theme_id = t.id
+        LEFT JOIN note_categories nc ON n.id = nc.note_id
+        LEFT JOIN categories c ON nc.category_id = c.id
+        WHERE u.role = 'student' OR n.user_id = $1
+        ORDER BY n.created_at DESC
+      `;
+      params = [userId];
+    } else {
+      // Student/Other can see OWN notes
+      // (ignoring targeted notes for now to keep v0.3.0 parity, but structure is ready)
+      query = `
+        SELECT n.*, u.role AS owner_role, u.username as owner_username,
+               t.id as theme_id, t.name as theme_name, t.color as theme_color,
+               c.id as category_id, c.name as category_name
+        FROM notes n 
+        JOIN users u ON n.user_id = u.id 
+        LEFT JOIN note_themes nt ON n.id = nt.note_id
+        LEFT JOIN themes t ON nt.theme_id = t.id
+        LEFT JOIN note_categories nc ON n.id = nc.note_id
+        LEFT JOIN categories c ON nc.category_id = c.id
+        WHERE n.user_id = $1 
+        ORDER BY n.created_at DESC
+      `;
+      params = [userId];
+    }
+
+    const result = await pool.query(query, params);
+    
+    // Map results to cleaner object structure
+    const notes = result.rows.map((r: any) => ({
+      id: r.id,
+      user_id: r.user_id,
+      title: r.title,
+      content: r.content,
+      created_at: r.created_at,
+      theme: r.theme_id ? { id: r.theme_id, name: r.theme_name, color: r.theme_color } : null,
+      category: r.category_id ? { id: r.category_id, name: r.category_name } : null,
+      owner_role: r.owner_role,
+      owner_username: r.owner_username,
+      reactions_up: r.reactions_up || 0,
+      reactions_down: r.reactions_down || 0,
+      view_count: r.view_count || 0,
+      pinned: r.pinned || false,
+      urgent: r.urgent || false
+    }));
+
+    res.json(notes);
+  } catch (err) {
+    console.error('Error listing notes:', err);
+    res.status(500).json({ error: 'Internal error' });
+  }
+};
+
+export const createNote = async (req: any, res: Response) => {
+  try {
+    const { title, content, theme_id, category_id } = NoteCreateSchema.parse(req.body);
+    const userId = req.user.id;
+
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      
+      const noteRes = await client.query(
+        'INSERT INTO notes (user_id, title, content) VALUES ($1, $2, $3) RETURNING id, title, content, created_at',
+        [userId, title, content]
+      );
+      const note = noteRes.rows[0];
+
+      if (theme_id) {
+        await client.query('INSERT INTO note_themes (note_id, theme_id) VALUES ($1, $2)', [note.id, theme_id]);
+      }
+
+      if (category_id) {
+        await client.query('INSERT INTO note_categories (note_id, category_id) VALUES ($1, $2)', [note.id, category_id]);
+      }
+
+      await client.query('COMMIT');
+      res.status(201).json({ ...note, theme_id, category_id });
+    } catch (e) {
+      await client.query('ROLLBACK');
+      throw e;
+    } finally {
+      client.release();
+    }
+  } catch (err: any) {
+    if (err instanceof z.ZodError) return res.status(400).json({ error: err.errors });
+    console.error('Error creating note:', err);
+    res.status(500).json({ error: 'Internal error' });
+  }
+};
+
+export const deleteNote = async (req: any, res: Response) => {
+  try {
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) return res.status(400).json({ error: 'Invalid ID' });
+
+    const noteRes = await pool.query('SELECT user_id FROM notes WHERE id = $1', [id]);
+    if (noteRes.rows.length === 0) return res.status(404).json({ error: 'Not found' });
+
+    const note = noteRes.rows[0];
+    const isOwner = note.user_id === req.user.id;
+    const isAdmin = req.user.role === 'admin';
+
+    if (!isOwner && !isAdmin) {
+      return res.status(403).json({ error: 'Forbidden' });
+    }
+
+    await pool.query('DELETE FROM notes WHERE id = $1', [id]);
+    res.json({ message: 'Deleted' });
+  } catch (err) {
+    console.error('Error deleting note:', err);
+    res.status(500).json({ error: 'Internal error' });
+  }
+};
+
+export const getNote = async (req: any, res: Response) => {
+  try {
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) return res.status(400).json({ error: 'Invalid ID' });
+
+    const result = await pool.query(
+      `SELECT n.*, u.username as owner_username, u.role as owner_role,
+              t.id as theme_id, t.name as theme_name, t.color as theme_color,
+              c.id as category_id, c.name as category_name
+       FROM notes n 
+       JOIN users u ON n.user_id = u.id 
+       LEFT JOIN note_themes nt ON n.id = nt.note_id
+       LEFT JOIN themes t ON nt.theme_id = t.id
+       LEFT JOIN note_categories nc ON n.id = nc.note_id
+       LEFT JOIN categories c ON nc.category_id = c.id
+       WHERE n.id = $1`, 
+      [id]
+    );
+
+    if (result.rows.length === 0) return res.status(404).json({ error: 'Not found' });
+
+    const role = req.user.role;
+    const userId = req.user.id;
+    const r = result.rows[0];
+
+    // Access Control Logic
+    const isOwner = r.user_id === userId;
+    const isAdminOrTech = role === 'admin' || role === 'technician';
+    const isTeacherOfStudent = role === 'teacher' && r.owner_role === 'student';
+
+    if (!isOwner && !isAdminOrTech && !isTeacherOfStudent) {
+      return res.status(403).json({ error: 'Forbidden' });
+    }
+
+    // Format response
+    const note = {
+      id: r.id,
+      user_id: r.user_id,
+      title: r.title,
+      content: r.content,
+      created_at: r.created_at,
+      theme: r.theme_id ? { id: r.theme_id, name: r.theme_name, color: r.theme_color } : null,
+      category: r.category_id ? { id: r.category_id, name: r.category_name } : null,
+      owner_role: r.owner_role,
+      owner_username: r.owner_username,
+      reactions_up: r.reactions_up || 0,
+      reactions_down: r.reactions_down || 0,
+      view_count: r.view_count || 0,
+      pinned: r.pinned || false,
+      urgent: r.urgent || false
+    };
+
+    res.json(note);
+  } catch (err) {
+    console.error('Error getting note:', err);
+    res.status(500).json({ error: 'Internal error' });
+  }
+};
+
+export const updateNote = async (req: any, res: Response) => {
+  try {
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) return res.status(400).json({ error: 'Invalid ID' });
+
+    // Validate ownership
+    const noteRes = await pool.query('SELECT n.*, u.role as owner_role FROM notes n JOIN users u ON n.user_id = u.id WHERE n.id = $1', [id]);
+    if (noteRes.rows.length === 0) return res.status(404).json({ error: 'Not found' });
+    
+    const note = noteRes.rows[0];
+    const role = req.user.role;
+    const userId = req.user.id;
+    
+    const isOwner = note.user_id === userId;
+    const isAdmin = role === 'admin';
+    const isTeacherOfStudent = role === 'teacher' && note.owner_role === 'student';
+    
+    if (!isOwner && !isAdmin && !isTeacherOfStudent) {
+      return res.status(403).json({ error: 'Forbidden' });
+    }
+
+    const { title, content, theme_id, category_id } = NoteUpdateSchema.parse(req.body);
+    
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      
+      const updates: string[] = [];
+      const values: any[] = [];
+      let paramIndex = 1;
+      
+      if (title !== undefined) {
+        updates.push(`title = $${paramIndex++}`);
+        values.push(title);
+      }
+      if (content !== undefined) {
+        updates.push(`content = $${paramIndex++}`);
+        values.push(content);
+      }
+      
+      if (updates.length > 0) {
+        updates.push(`updated_at = NOW()`);
+        
+        const query = `UPDATE notes SET ${updates.join(', ')} WHERE id = $${paramIndex}`;
+        values.push(id);
+        
+        await client.query(query, values);
+      }
+
+      if (theme_id !== undefined) {
+        await client.query('DELETE FROM note_themes WHERE note_id = $1', [id]);
+        if (theme_id) { 
+           await client.query('INSERT INTO note_themes (note_id, theme_id) VALUES ($1, $2)', [id, theme_id]);
+        }
+      }
+
+      if (category_id !== undefined) {
+        await client.query('DELETE FROM note_categories WHERE note_id = $1', [id]);
+        if (category_id) {
+           await client.query('INSERT INTO note_categories (note_id, category_id) VALUES ($1, $2)', [id, category_id]);
+        }
+      }
+
+      await client.query('COMMIT');
+      res.json({ message: 'Updated', id });
+    } catch (e) {
+      await client.query('ROLLBACK');
+      throw e;
+    } finally {
+      client.release();
+    }
+  } catch (err) {
+    if (err instanceof z.ZodError) return res.status(400).json({ error: err.errors });
+    console.error('Error updating note:', err);
+    res.status(500).json({ error: 'Internal error' });
+  }
+};
