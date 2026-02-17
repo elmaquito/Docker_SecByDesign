@@ -213,12 +213,13 @@ onMounted(() => {
 
 <style scoped>
 .account-settings {
-  background: white;
+  background: var(--card-bg);
   border-radius: 12px;
   padding: 0;
   max-width: 600px;
   margin: 0 auto;
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+  color: var(--text-color);
 }
 
 .settings-header {
@@ -226,12 +227,12 @@ onMounted(() => {
   justify-content: space-between;
   align-items: center;
   padding: 24px 32px;
-  border-bottom: 1px solid #e0e0e0;
+  border-bottom: 1px solid var(--border-color);
 }
 
 .settings-header h2 {
   margin: 0;
-  color: #333;
+  color: var(--header-text);
   font-size: 24px;
 }
 
@@ -239,7 +240,7 @@ onMounted(() => {
   background: none;
   border: none;
   font-size: 32px;
-  color: #999;
+  color: var(--text-secondary);
   cursor: pointer;
   padding: 0;
   line-height: 1;
@@ -247,7 +248,7 @@ onMounted(() => {
 }
 
 .close-btn:hover {
-  color: #666;
+  color: var(--text-color);
 }
 
 .access-denied {
@@ -256,7 +257,7 @@ onMounted(() => {
 }
 
 .access-denied p {
-  color: #666;
+  color: var(--text-secondary);
   margin-bottom: 20px;
   line-height: 1.6;
 }
@@ -271,7 +272,7 @@ onMounted(() => {
 
 .form-section h3 {
   margin: 0 0 20px 0;
-  color: #333;
+  color: var(--header-text);
   font-size: 18px;
   font-weight: 600;
 }
@@ -284,14 +285,16 @@ onMounted(() => {
   display: block;
   margin-bottom: 8px;
   font-weight: 600;
-  color: #333;
+  color: var(--text-color);
   font-size: 14px;
 }
 
 .form-input {
   width: 100%;
   padding: 12px 16px;
-  border: 2px solid #e0e0e0;
+  border: 2px solid var(--border-color);
+  background: var(--input-bg);
+  color: var(--text-color);
   border-radius: 8px;
   font-size: 15px;
   transition: all 0.3s ease;
@@ -312,7 +315,7 @@ onMounted(() => {
 
 .input-hint {
   font-size: 12px;
-  color: #999;
+  color: var(--text-secondary);
   margin-top: 6px;
 }
 
@@ -321,7 +324,7 @@ onMounted(() => {
   gap: 12px;
   margin-top: 32px;
   padding-top: 24px;
-  border-top: 1px solid #e0e0e0;
+  border-top: 1px solid var(--border-color);
 }
 
 .btn-primary,
@@ -352,19 +355,20 @@ onMounted(() => {
 }
 
 .btn-secondary {
-  background: #f5f5f5;
-  color: #666;
+  background: var(--input-bg);
+  color: var(--text-color);
+  border: 1px solid var(--border-color);
 }
 
 .btn-secondary:hover {
-  background: #e0e0e0;
+  background: var(--border-color);
 }
 
 .error-message {
   padding: 12px;
-  background: #fee;
+  background: rgba(231, 76, 60, 0.1);
   border-left: 4px solid #f44;
-  color: #c33;
+  color: #e74c3c;
   border-radius: 4px;
   font-size: 14px;
   margin-bottom: 20px;
@@ -372,9 +376,9 @@ onMounted(() => {
 
 .success-message {
   padding: 12px;
-  background: #efe;
+  background: rgba(46, 204, 113, 0.1);
   border-left: 4px solid #4c4;
-  color: #363;
+  color: #2ecc71;
   border-radius: 4px;
   font-size: 14px;
   margin-bottom: 20px;

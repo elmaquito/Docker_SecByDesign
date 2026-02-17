@@ -405,15 +405,16 @@ onMounted(() => {
   margin-bottom: 1.5rem;
   flex-wrap: wrap;
   padding: 1rem;
-  background: white;
+  background: var(--card-bg);
   border-radius: 12px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 }
 
 .action-btn {
   padding: 10px 20px;
-  border: 2px solid #e9ecef;
-  background: white;
+  border: 2px solid var(--border-color);
+  background: var(--input-bg);
+  color: var(--text-color);
   border-radius: 8px;
   cursor: pointer;
   font-size: 0.95rem;
@@ -538,20 +539,20 @@ onMounted(() => {
 
 .section-header h2 {
   margin: 0;
-  color: #2c3e50;
+  color: var(--header-text);
   font-size: 1.75rem;
 }
 
 .empty-state {
   text-align: center;
   padding: 3rem;
-  background: white;
+  background: var(--card-bg);
   border-radius: 12px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 }
 
 .empty-state p {
-  color: #6c757d;
+  color: var(--text-secondary);
   margin-bottom: 1rem;
   font-size: 1.1rem;
 }
@@ -578,11 +579,12 @@ onMounted(() => {
 }
 
 .note-card {
-  background: white;
+  background: var(--card-bg);
   padding: 1.5rem;
   border-radius: 12px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-  border-left: 4px solid #3498db;
+  border-left: 4px solid var(--primary-color);
+  color: var(--text-color);
 }
 
 .note-header {
@@ -594,7 +596,7 @@ onMounted(() => {
 
 .note-header h4 {
   margin: 0;
-  color: #2c3e50;
+  color: var(--header-text);
   font-size: 1.25rem;
 }
 
@@ -716,7 +718,7 @@ onMounted(() => {
 }
 
 .admin-section {
-  background: white;
+  background: var(--card-bg);
   padding: 1.5rem;
   border-radius: 12px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
@@ -724,13 +726,13 @@ onMounted(() => {
 
 .admin-section h3 {
   margin-top: 0;
-  color: #2c3e50;
+  color: var(--header-text);
 }
 
 .create-user-form {
   margin-bottom: 2rem;
   padding: 1.5rem;
-  background: #f8f9fa;
+  background: var(--bg-color);
   border-radius: 8px;
 }
 
@@ -816,7 +818,7 @@ onMounted(() => {
 }
 
 .modal-content {
-  background: white;
+  background: var(--card-bg);
   padding: 2rem;
   border-radius: 12px;
   max-width: 600px;
@@ -833,7 +835,7 @@ onMounted(() => {
 
 .modal-header h3 {
   margin: 0;
-  color: #2c3e50;
+  color: var(--header-text);
 }
 
 .modal-close {
@@ -841,7 +843,7 @@ onMounted(() => {
   border: none;
   font-size: 2rem;
   cursor: pointer;
-  color: #6c757d;
+  color: var(--text-secondary);
   line-height: 1;
   transition: color 0.3s;
 }

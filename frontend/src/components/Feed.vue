@@ -186,7 +186,9 @@ onMounted(() => {
 .search-input {
   width: 100%;
   padding: 12px 16px;
-  border: 1px solid #ddd;
+  border: 1px solid var(--border-color);
+  background: var(--input-bg);
+  color: var(--text-color);
   border-radius: 8px;
   font-size: 1rem;
   transition: border-color 0.3s;
@@ -213,11 +215,11 @@ onMounted(() => {
 }
 
 .filters-panel {
-  background: #f8f9fa;
+  background: var(--bg-color);
   padding: 1.5rem;
   border-radius: 8px;
   margin-bottom: 1.5rem;
-  border: 1px solid #e9ecef;
+  border: 1px solid var(--border-color);
 }
 
 .filter-section {
@@ -226,7 +228,7 @@ onMounted(() => {
 
 .filter-section h4 {
   margin: 0 0 0.75rem 0;
-  color: #2c3e50;
+  color: var(--text-color);
   font-size: 0.95rem;
 }
 
@@ -242,15 +244,16 @@ onMounted(() => {
   gap: 0.5rem;
   cursor: pointer;
   padding: 6px 12px;
-  background: white;
+  background: var(--input-bg);
   border-radius: 6px;
-  border: 1px solid #dee2e6;
+  border: 1px solid var(--border-color);
   transition: all 0.2s;
+  color: var(--text-color);
 }
 
 .filter-checkbox:hover {
   border-color: #3498db;
-  background: #e3f2fd;
+  background: rgba(52, 152, 219, 0.1);
 }
 
 .filter-checkbox input {
@@ -282,12 +285,13 @@ onMounted(() => {
 }
 
 .btn-reset {
-  background: #e9ecef;
-  color: #495057;
+  background: var(--input-bg);
+  color: var(--text-color);
+  border: 1px solid var(--border-color);
 }
 
 .btn-reset:hover {
-  background: #dee2e6;
+  background: var(--border-color);
 }
 
 .feed-content {
@@ -297,7 +301,7 @@ onMounted(() => {
 .loading, .empty-state {
   text-align: center;
   padding: 3rem;
-  color: #6c757d;
+  color: var(--text-secondary);
   font-size: 1.1rem;
 }
 

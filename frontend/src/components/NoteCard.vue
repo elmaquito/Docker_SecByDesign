@@ -109,12 +109,13 @@ const getThemeColorLocal = getThemeColor
 
 <style scoped>
 .note-card {
-  background: white;
+  background: var(--card-bg);
   border-radius: 12px;
   padding: 1.5rem;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-  border-left: 4px solid #3498db;
+  border-left: 4px solid var(--primary-color);
   transition: all 0.3s ease;
+  color: var(--text-color);
 }
 
 .note-card:hover {
@@ -140,7 +141,7 @@ const getThemeColorLocal = getThemeColor
 .note-title {
   margin: 0;
   font-size: 1.25rem;
-  color: #2c3e50;
+  color: var(--header-text);
   font-weight: 600;
 }
 
@@ -149,21 +150,21 @@ const getThemeColorLocal = getThemeColor
   align-items: center;
   gap: 0.5rem;
   font-size: 0.875rem;
-  color: #6c757d;
+  color: var(--text-secondary);
 }
 
 .separator {
-  color: #dee2e6;
+  color: var(--border-color);
 }
 
 .author {
   font-weight: 500;
-  color: #495057;
+  color: var(--text-color);
 }
 
 .note-content {
   margin-bottom: 1rem;
-  color: #495057;
+  color: var(--text-color);
   line-height: 1.6;
 }
 
@@ -193,7 +194,7 @@ const getThemeColorLocal = getThemeColor
 }
 
 .more-tags {
-  color: #6c757d;
+  color: var(--text-secondary);
   font-size: 0.85rem;
 }
 
@@ -202,14 +203,14 @@ const getThemeColorLocal = getThemeColor
   justify-content: space-between;
   align-items: center;
   padding-top: 1rem;
-  border-top: 1px solid #e9ecef;
+  border-top: 1px solid var(--border-color);
 }
 
 .note-stats {
   display: flex;
   gap: 1rem;
   font-size: 0.875rem;
-  color: #6c757d;
+  color: var(--text-secondary);
 }
 
 .note-actions {
@@ -228,20 +229,20 @@ const getThemeColorLocal = getThemeColor
 }
 
 .btn-view {
-  background: #e3f2fd;
-  color: #1976d2;
+  background: rgba(52, 152, 219, 0.1);
+  color: var(--primary-color);
 }
 
 .btn-view:hover {
-  background: #bbdefb;
+  background: rgba(52, 152, 219, 0.2);
 }
 
 .btn-comment {
-  background: #f3e5f5;
-  color: #7b1fa2;
+  background: rgba(155, 89, 182, 0.1);
+  color: var(--secondary-color);
 }
 
 .btn-comment:hover {
-  background: #e1bee7;
+  background: rgba(155, 89, 182, 0.2);
 }
 </style>

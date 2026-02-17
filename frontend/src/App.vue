@@ -2,11 +2,16 @@
   <div class="container">
     <header>
       <h1>Notimatic</h1>
-      <button v-if="user" @click="logout" class="logout-btn">Logout ({{ user.username }})</button>
+      <div class="header-actions">
+        <button @click="toggleTheme" class="theme-toggle">
+          {{ isDarkMode ? '☀️' : '🌙' }}
+        </button>
+        <button v-if="user" @click="logout" class="logout-btn">Logout ({{ user.username }})</button>
+      </div>
     </header>
 
     <main>
-      <div v-if="loading" class="loading">Loading...</div>
+      <Loader v-if="loading" text="Chargement de Notimatic..." />
       
       <div v-else-if="!user">
         <ForgotPassword v-if="showForgotPassword" @back="showForgotPassword = false" />
@@ -27,8 +32,11 @@ import Login from './components/Login.vue'
 import Dashboard from './components/Dashboard.vue'
 import ForgotPassword from './components/ForgotPassword.vue'
 import ResetPassword from './components/ResetPassword.vue'
+import Loader from './components/Loader.vue'
 import { API_V1_BASE_URL } from './config/api.js'
+import { useTheme } from './composables/useTheme.js'
 
+const { isDarkMode, toggleTheme } = useTheme()
 const user = ref(null)
 const loading = ref(true)
 const showForgotPassword = ref(false)
@@ -84,6 +92,30 @@ const logout = async () => {
 </script>
 
 <style>
+:root {
+  --primary-color: #3498db;
+  --secondary-color: #667eea;
+  --bg-color: #f5f7fa;
+  --text-color: #2c3e50;
+  --text-secondary: #6c757d;
+  --header-text: #2c3e50;
+  --card-bg: white;
+  --header-bg: white;
+  --input-bg: white;
+  --border-color: #ddd;
+}
+
+:root.dark-mode {
+  --bg-color: #1a1a1a;
+  --text-color: #e0e0e0;
+  --text-secondary: #a0a0a0;
+  --header-text: #e0e0e0;
+  --card-bg: #2d2d2d;
+  --header-bg: #333;
+  --input-bg: #333;
+  --border-color: #444;
+}
+
 * {
   box-sizing: border-box;
 }
@@ -91,8 +123,10 @@ const logout = async () => {
 body { 
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
   margin: 0;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: var(--bg-color);
+  color: var(--text-color);
   min-height: 100vh;
+  transition: background-color 0.3s, color 0.3s;
 }
 
 .container {
@@ -108,9 +142,10 @@ header {
   align-items: center;
   margin-bottom: 2rem;
   padding: 1.5rem 2rem;
-  background: white;
+  background: var(--header-bg);
   border-radius: 12px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  transition: background-color 0.3s;
 }
 
 header h1 {
@@ -122,6 +157,27 @@ header h1 {
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
+}
+
+/* Header Actions */
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.theme-toggle {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  padding: 5px;
+  border-radius: 50%;
+  transition: background-color 0.2s;
+}
+
+.theme-toggle:hover {
+  background-color: rgba(0, 0, 0, 0.05);
 }
 
 .logout-btn {
@@ -143,17 +199,18 @@ header h1 {
 }
 
 main {
-  background: rgba(255, 255, 255, 0.95);
+  background: var(--card-bg);
   border-radius: 12px;
   padding: 2rem;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
   backdrop-filter: blur(10px);
+  transition: background-color 0.3s;
 }
 
 .loading {
   text-align: center;
   padding: 3rem;
   font-size: 1.2rem;
-  color: #495057;
+  color: var(--text-color);
 }
 </style>
