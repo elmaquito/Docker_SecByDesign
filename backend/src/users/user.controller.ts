@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import argon2 from 'argon2';
 import { z } from 'zod';
 import { pool } from '../config/database';
+import { AuditLogger } from '../common/audit';
 import { userCreateSchema, accountUpdateSchema } from './user.schema';
 
 export const createUser = async (req: any, res: Response) => {
@@ -121,3 +122,117 @@ export const setupAdmin = async (req: Request, res: Response) => {
     res.status(500).json({ error: 'Internal error' });
   }
 };
+
+export const updateAccount = async (req: any, res: Response) => {
+  try {
+    const { email, phone, password } = accountUpdateSchema.parse(req.body);
+    const updates: string[] = [];
+    const values: any[] = [];
+    let paramIndex = 1;
+
+    if (email !== undefined) {
+      updates.push(`email = $${paramIndex++}`);
+      values.push(email);
+    }
+    if (phone !== undefined) {
+      updates.push(`phone = $${paramIndex++}`);
+      values.push(phone);
+    }
+    if (password !== undefined) {
+      const hash = await argon2.hash(password, { type: argon2.argon2id });
+      updates.push(`password_hash = $${paramIndex++}`);
+      values.push(hash);
+    }
+
+    if (updates.length > 0) {
+      values.push(req.user.id);
+      await pool.query(`UPDATE users SET ${updates.join(', ')} WHERE id = $${paramIndex}`, values);
+    }
+
+    // Audit Log for critical change (Password/Email update)
+    AuditLogger.log({
+      userId: req.user.id,
+      action: 'PROFILE_UPDATED',
+      entityType: 'user',
+      entityId: req.user.id,
+      details: { fields: Object.keys(req.body) },
+      ipAddress: req.ip,
+      userAgent: req.get('User-Agent')
+    });
+
+    res.json({ message: 'Account updated' });
+  } catch (err: any) {
+    if (err instanceof z.ZodError) return res.status(400).json({ error: err.errors });
+    // Handle unique constraint on email/phone if applicable
+    if (err.code === '23505') return res.status(409).json({ error: 'Email or phone already in use' });
+    console.error('Error updating account:', err);
+    res.status(500).json({ error: 'Internal error' });
+  }
+};
+
+export const exportData = async (req: any, res: Response) => {
+  const userId = parseInt(req.params.id);
+  
+  if (req.user.id !== userId && req.user.role !== 'admin') {
+    return res.status(403).json({ error: 'Forbidden' });
+  }
+
+  try {
+    const userRes = await pool.query('SELECT id, username, role, created_at FROM users WHERE id = $1', [userId]);
+    if (userRes.rows.length === 0) return res.status(404).json({ error: 'User not found' });
+    const user = userRes.rows[0];
+
+    // Fetch Notes
+    const notesRes = await pool.query('SELECT * FROM notes WHERE user_id = $1', [userId]);
+    const notes = notesRes.rows;
+
+    const exportData = {
+      user,
+      notes,
+      exportedAt: new Date()
+    };
+
+    // Audit Log
+    AuditLogger.log({
+      userId: req.user.id,
+      action: 'USER_EXPORTED',
+      entityType: 'user',
+      entityId: userId,
+      ipAddress: req.ip,
+      userAgent: req.get('User-Agent')
+    });
+
+    res.json(exportData);
+  } catch (err) {
+    console.error('Error exporting data:', err);
+    res.status(500).json({ error: 'Internal error' });
+  }
+};
+
+export const deleteUser = async (req: any, res: Response) => {
+  const userId = parseInt(req.params.id);
+
+  if (req.user.id !== userId && req.user.role !== 'admin') {
+    return res.status(403).json({ error: 'Forbidden' });
+  }
+
+  try {
+    await pool.query('UPDATE users SET deleted_at = NOW() WHERE id = $1', [userId]);
+
+    AuditLogger.log({
+      userId: req.user.id,
+      action: 'USER_DELETED',
+      entityType: 'user',
+      entityId: userId,
+      details: { requester: req.user.username },
+      ipAddress: req.ip,
+      userAgent: req.get('User-Agent')
+    });
+
+    res.json({ message: 'User account marked for deletion (Soft Delete)' });
+  } catch (err) {
+    console.error('Error deleting user:', err);
+    res.status(500).json({ error: 'Internal error' });
+  }
+};
+

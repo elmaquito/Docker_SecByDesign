@@ -1,5 +1,7 @@
 import { NextFunction, Response } from 'express';
 import { Pool } from 'pg';
+import rateLimit from 'express-rate-limit';
+import validator from 'validator';
 import { NODE_ENV } from '../config/env';
 import { pool } from '../config/database';
 import { TokenService } from '../auth/token.service';
@@ -108,6 +110,42 @@ export const authorize = (allowedRoles: string[]) => {
 // This is a helper, not a middleware, to be used inside routes for granular control.
 export const isOwner = (resourceUserId: number, currentUserId: number) => {
   return resourceUserId === currentUserId;
+};
+
+// Rate Limiters
+export const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // Limit each IP to 100 requests per windowMs
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many requests, please try again later.' }
+});
+
+export const authLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: 15, // Limit each IP to 15 login requests per hour
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many login attempts, please try again later.' }
+});
+
+export const commentLimiter = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: 10,
+  message: { error: 'Slow down! Minimum 10 comments per minute rule.' }
+});
+
+// Sanitization Middleware
+export const sanitizeInput = (req: any, res: Response, next: NextFunction) => {
+  if (req.body) {
+    for (const key in req.body) {
+      if (typeof req.body[key] === 'string') {
+        req.body[key] = validator.escape(req.body[key]);
+      }
+      // Recursively sanitize objects? keeping it simple for now as requested
+    }
+  }
+  next();
 };
 
 // 4. Global Error Handler

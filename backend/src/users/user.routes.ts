@@ -14,4 +14,8 @@ router.get('/', authenticate, authorize(['admin', 'technician', 'teacher']), Use
 router.get('/me', authenticate, UserController.getAccount);
 router.put('/me', authenticate, UserController.updateAccount);
 
+// GDPR Routes
+router.get('/:id/export', authenticate, UserController.exportData);
+router.delete('/:id', authenticate, UserController.deleteUser);
+
 export default router;

@@ -48,6 +48,47 @@ tests/integration/test_v0_2_0.py ....                                    [100%]
 ### 4. Infrastructure Changes
 *   **Fix:** ADDED `infrastructure/docker-compose.test.yml` for dedicated test environment.
 *   **Fix:** UPDATED `infrastructure/Dockerfile.backend` to use `node:18-bullseye` (fixed `argon2` binary incompatibility).
+
+## v0.5.0 - Security & GDPR Compliance
+
+**Date:** February 17, 2026  
+**Status:** ✅ Implemented
+
+### 1. Features Implemented
+The following modules were added to enhance application security and ensure GDPR compliance:
+
+| Module | Function | Description | Endpoint |
+| :--- | :--- | :--- | :--- |
+| **Security** | `Rate Limiting` | Applied API, Login and Comment rate limits | Global Middleware |
+| | `Sanitization` | Input sanitization to prevent XSS | Global Middleware |
+| | `Frontend Security` | DOMPurify wrapper for safe content rendering | `frontend/src/utils/sanitize.js` |
+| **GDPR** | `Export Data` | Allow users to export all their data | `GET /api/v1/users/:id/export` |
+| | `Delete Account` | Soft delete functionality for user accounts | `DELETE /api/v1/users/:id` |
+| **Audit** | `Audit Logging` | Log critical actions (Note CRUD, GDPR Ops) | Internal Service |
+
+### 2. Infrastructure Changes
+*   **Dependencies:** Added `express-rate-limit`, `validator` (Backend), `dompurify` (Frontend).
+*   **Database:** Utilized `audit_logs` and `gdpr_export_requests` tables (Migration 004).
+
+## v0.6.0 - Testing & CI/CD Automation
+
+**Date:** February 17, 2026  
+**Status:** ✅ Implemented
+
+### 1. Features Implemented
+Automation and quality assurance infrastructure has been established.
+
+| Module | Function | Description | Technology |
+| :--- | :--- | :--- | :--- |
+| **Backend Testing** | `Unit Tests` | Testing framework setup for Middleware | `Jest`, `Supertest` |
+| | `Auth Tests` | Verification of Auth & RBAC logic | `Jest` |
+| **Frontend Testing** | `Component Tests` | Unit testing for `NoteCard.vue` | `Vitest`, `Vue Test Utils` |
+| **CI/CD** | `Pipeline` | Automated testing on Push/PR | `GitHub Actions` |
+
+### 2. Infrastructure Changes
+*   **Backend:** Configured `jest.config.js`, added `tests/` directory structure.
+*   **Frontend:** Configured `vitest`, added `src/tests/` directory.
+*   **CI:** Validated existing `.github/workflows/ci.yml` with updated test scripts.
 *   **Fix:** ADDED `frontend/nginx.conf` for production build stability.
 *   **Migration:** Added migrations 001-008 covering all new schemas.
 

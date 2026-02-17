@@ -176,10 +176,9 @@ Implémenter le feed d'actualités avec filtrage et assignation par thèmes/cat�
 
 ---
 
-## Version 0.5.0 - Sécurité & GDPR
+## Version 0.5.0 - Sécurité & GDPR (Actuel)
 
-**Dates estimées**: Semaine 4  
-**Effort estimé**: 5-7 jours
+**Statut**: ✅ Complété
 
 ### Objectifs
 Renforcer la sécurité et implémenter la conformité GDPR.
@@ -236,10 +235,9 @@ Renforcer la sécurité et implémenter la conformité GDPR.
 
 ---
 
-## Version 0.6.0 - Tests & CI/CD
+## Version 0.6.0 - Tests & CI/CD (Actuel)
 
-**Dates estimées**: Semaine 5  
-**Effort estimé**: 5-7 jours
+**Statut**: ✅ Complété
 
 ### Objectifs
 Automatiser les tests et la CI/CD.

@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { z } from 'zod';
 import { pool } from '../config/database';
+import { AuditLogger } from '../common/audit';
 import { NoteCreateSchema, NoteUpdateSchema } from './notes.schema';
 
 export const listNotes = async (req: any, res: Response) => {
@@ -110,6 +111,18 @@ export const createNote = async (req: any, res: Response) => {
       }
 
       await client.query('COMMIT');
+
+      // Audit Log
+      AuditLogger.log({
+        userId,
+        action: 'NOTE_CREATED',
+        entityType: 'note',
+        entityId: note.id,
+        details: { title },
+        ipAddress: req.ip,
+        userAgent: req.get('User-Agent')
+      });
+
       res.status(201).json({ ...note, theme_id, category_id });
     } catch (e) {
       await client.query('ROLLBACK');
@@ -141,6 +154,17 @@ export const deleteNote = async (req: any, res: Response) => {
     }
 
     await pool.query('DELETE FROM notes WHERE id = $1', [id]);
+
+    // Audit Log
+    AuditLogger.log({
+      userId: req.user.id,
+      action: 'NOTE_DELETED',
+      entityType: 'note',
+      entityId: id,
+      ipAddress: req.ip,
+      userAgent: req.get('User-Agent')
+    });
+
     res.json({ message: 'Deleted' });
   } catch (err) {
     console.error('Error deleting note:', err);

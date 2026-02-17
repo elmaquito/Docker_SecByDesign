@@ -72,7 +72,7 @@ const getNoteIcon = computed(() => {
 })
 
 const getAuthorName = computed(() => {
-  return props.note.author_name || props.note.username || 'Utilisateur anonyme'
+  return props.note.author_name || props.note.username || props.note.owner_username || 'Utilisateur anonyme'
 })
 
 const getExcerpt = computed(() => {

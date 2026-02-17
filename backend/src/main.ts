@@ -11,7 +11,7 @@ import userRoutes from './users/user.routes';
 import notesRoutes from './notes/notes.routes';
 import metadataRoutes from './metadata/metadata.routes';
 import tagsRoutes from './tags/tags.routes';
-import { errorHandler } from './common/middleware';
+import { errorHandler, apiLimiter, sanitizeInput } from './common/middleware';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -24,6 +24,10 @@ app.use(cors({
 }));
 app.use(express.json());
 app.use(cookieParser());
+
+// Security Middleware (0.5.0)
+app.use(apiLimiter);
+app.use(sanitizeInput);
 
 // --- Routes ---
 app.use('/auth', authRoutes);
