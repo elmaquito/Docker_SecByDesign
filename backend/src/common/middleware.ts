@@ -109,3 +109,23 @@ export const authorize = (allowedRoles: string[]) => {
 export const isOwner = (resourceUserId: number, currentUserId: number) => {
   return resourceUserId === currentUserId;
 };
+
+// 4. Global Error Handler
+export const errorHandler = (err: any, req: any, res: Response, next: NextFunction) => {
+  console.error('[Error] Uncaught Exception:', err);
+  
+  // Handle Zod errors (if any leak here, usually they are caught in controller)
+  if (err.name === 'ZodError' || err.issues) {
+     return res.status(400).json({ error: 'Validation Error', details: err.issues || err.errors });
+  }
+
+  // Handle Postgres errors
+  if (err.code === '23505') { // Unique constraint violation
+    return res.status(409).json({ error: 'Conflict: Value already exists' });
+  }
+
+  // Default error
+  const status = err.status || 500;
+  const message = err.message || 'Internal Server Error';
+  res.status(status).json({ error: message });
+};

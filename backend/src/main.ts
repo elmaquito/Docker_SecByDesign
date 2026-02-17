@@ -9,8 +9,9 @@ import { NODE_ENV } from './config/env';
 import authRoutes from './auth/auth.routes';
 import userRoutes from './users/user.routes';
 import notesRoutes from './notes/notes.routes';
-import metadataRoutes from './notes/metadata.routes'; // Exports router with /themes and /categories
+import metadataRoutes from './metadata/metadata.routes';
 import tagsRoutes from './tags/tags.routes';
+import { errorHandler } from './common/middleware';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -42,10 +43,7 @@ app.get('/health', async (req, res) => {
 });
 
 // --- Error Handler ---
-app.use((err: any, req: Request, res: Response, next: NextFunction) => {
-  console.error('[Error]', err);
-  res.status(500).json({ error: 'Internal Server Error' });
-});
+app.use(errorHandler);
 
 // --- Start Server ---
 app.listen(PORT, () => {
