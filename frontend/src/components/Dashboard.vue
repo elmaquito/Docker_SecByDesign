@@ -129,6 +129,7 @@
                 <strong>{{ u.username }}</strong>
                 <span class="role-badge" :class="'role-' + u.role">{{ getRoleLabel(u.role) }}</span>
               </div>
+              <button v-if="u.id !== user.id" @click="removeUser(u.id)" class="btn-icon delete" title="Supprimer">🗑️</button>
             </div>
           </div>
         </div>
@@ -226,6 +227,15 @@ const createUser = async () => {
     newUser.role = 'student'
   } catch (e: any) {
     alert(e.message || 'Failed to create user')
+  }
+}
+
+const removeUser = async (id: number) => {
+  if (!confirm('Êtes-vous sûr de vouloir supprimer cet utilisateur ?')) return
+  try {
+    await userStore.deleteUser(id)
+  } catch (e: any) {
+    alert(e.message || 'Erreur lors de la suppression')
   }
 }
 

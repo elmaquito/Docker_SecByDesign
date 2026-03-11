@@ -24,7 +24,7 @@ export const createUser = async (req: any, res: Response) => {
 
 export const listUsers = async (req: Request, res: Response) => {
   try {
-    const result = await pool.query('SELECT id, username, role, created_at FROM users');
+    const result = await pool.query('SELECT id, username, role, created_at FROM users WHERE deleted_at IS NULL');
     res.json(result.rows);
   } catch (_err) {
     res.status(500).json({ error: 'Internal error' });

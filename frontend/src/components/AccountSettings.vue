@@ -125,7 +125,7 @@ const form = reactive({
 
 const fetchAccountInfo = async () => {
   try {
-    const res = await fetch(`${API_V1_BASE_URL}/account`, {
+    const res = await fetch(`${API_V1_BASE_URL}/users/me`, {
       credentials: 'include'
     })
     
@@ -176,8 +176,8 @@ const updateAccount = async () => {
       return
     }
     
-    const res = await fetch(`${API_V1_BASE_URL}/account`, {
-      method: 'PATCH',
+    const res = await fetch(`${API_V1_BASE_URL}/users/me`, {
+      method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
       body: JSON.stringify(payload)

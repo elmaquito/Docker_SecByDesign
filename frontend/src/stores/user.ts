@@ -46,11 +46,26 @@ export const useUserStore = defineStore('user', () => {
     }
   }
 
+  async function deleteUser(id: number) {
+    try {
+      const res = await fetch(`${API_V1_BASE_URL}/users/${id}`, {
+        method: 'DELETE',
+        credentials: 'include'
+      })
+      if (!res.ok) throw new Error('Failed to delete user')
+      users.value = users.value.filter(u => u.id !== id)
+    } catch (e: any) {
+      error.value = e.message
+      throw e
+    }
+  }
+
   return {
     users,
     loading,
     error,
     fetchUsers,
-    createUser
+    createUser,
+    deleteUser
   }
 })

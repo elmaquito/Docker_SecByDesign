@@ -18,5 +18,9 @@ export const NoteUpdateSchema = z.object({
 });
 
 export const ReactionSchema = z.object({
-  type: z.enum(['like', 'dislike', 'funny', 'insightful']),
+  reaction_type: z.enum(['up', 'down']),
+});
+
+export const CommentSchema = z.object({
+  content: z.string().min(1).max(1000),
 });

@@ -327,3 +327,145 @@ export const updateNote = async (req: any, res: Response) => {
     res.status(500).json({ error: 'Internal error' });
   }
 };
+
+// --- Reactions ---
+
+export const getUserReaction = async (req: any, res: Response) => {
+  try {
+    const noteId = parseInt(req.params.id);
+    if (isNaN(noteId)) return res.status(400).json({ error: 'Invalid Note ID' });
+
+    const result = await pool.query(
+      'SELECT reaction_type FROM reactions WHERE user_id = $1 AND note_id = $2',
+      [req.user.id, noteId]
+    );
+
+    res.json({ reaction: result.rows.length > 0 ? result.rows[0].reaction_type : null });
+  } catch (err) {
+    console.error('Error fetching reaction:', err);
+    res.status(500).json({ error: 'Internal error' });
+  }
+};
+
+export const addReaction = async (req: any, res: Response) => {
+  try {
+    const noteId = parseInt(req.params.id);
+    if (isNaN(noteId)) return res.status(400).json({ error: 'Invalid Note ID' });
+
+    const { reaction_type } = req.body; 
+    if (!['up', 'down'].includes(reaction_type)) return res.status(400).json({ error: 'Invalid reaction type' });
+
+    // Check existing reaction
+    const existingRes = await pool.query(
+      'SELECT reaction_type FROM reactions WHERE user_id = $1 AND note_id = $2',
+      [req.user.id, noteId]
+    );
+
+    if (existingRes.rows.length > 0) {
+      const existing = existingRes.rows[0];
+      if (existing.reaction_type === reaction_type) {
+        // Toggle off (remove)
+        await pool.query(
+          'DELETE FROM reactions WHERE user_id = $1 AND note_id = $2',
+          [req.user.id, noteId]
+        );
+        return res.json({ message: 'Reaction removed', toggled: true });
+      }
+    }
+
+    // Upsert (Insert or Update if different type)
+    await pool.query(
+      `INSERT INTO reactions (user_id, note_id, reaction_type) 
+       VALUES ($1, $2, $3) 
+       ON CONFLICT (user_id, note_id) DO UPDATE SET reaction_type = EXCLUDED.reaction_type, updated_at = NOW()`,
+      [req.user.id, noteId, reaction_type]
+    );
+
+    res.json({ message: 'Reaction added' });
+  } catch (err) {
+    console.error('Error adding reaction:', err);
+    res.status(500).json({ error: 'Internal error' });
+  }
+};
+
+export const removeReaction = async (req: any, res: Response) => {
+  try {
+    const noteId = parseInt(req.params.id);
+    if (isNaN(noteId)) return res.status(400).json({ error: 'Invalid Note ID' });
+
+    await pool.query(
+      'DELETE FROM reactions WHERE user_id = $1 AND note_id = $2',
+      [req.user.id, noteId]
+    );
+
+    res.json({ message: 'Reaction removed' });
+  } catch (err) {
+    console.error('Error removing reaction:', err);
+    res.status(500).json({ error: 'Internal error' });
+  }
+};
+
+// --- Comments ---
+
+export const getComments = async (req: any, res: Response) => {
+  try {
+    const noteId = parseInt(req.params.id);
+    if (isNaN(noteId)) return res.status(400).json({ error: 'Invalid ID' });
+
+    const result = await pool.query(
+      `SELECT c.id, c.content, c.created_at, u.username 
+       FROM comments c 
+       JOIN users u ON c.user_id = u.id 
+       WHERE c.note_id = $1 
+       ORDER BY c.created_at ASC`,
+      [noteId]
+    );
+
+    res.json(result.rows);
+  } catch (err) {
+    console.error('Error fetching comments:', err);
+    res.status(500).json({ error: 'Internal error' });
+  }
+};
+
+export const addComment = async (req: any, res: Response) => {
+  try {
+    const noteId = parseInt(req.params.id);
+    if (isNaN(noteId)) return res.status(400).json({ error: 'Invalid ID' });
+    const { content } = req.body;
+
+    if (!content || content.trim() === '') return res.status(400).json({ error: 'Content required' });
+
+    const result = await pool.query(
+      'INSERT INTO comments (note_id, user_id, content) VALUES ($1, $2, $3) RETURNING id, content, created_at',
+      [noteId, req.user.id, content]
+    );
+    
+    // Return structured comment with username
+    const comment = {
+      ...result.rows[0],
+      username: req.user.username
+    };
+
+    AuditLogger.log({
+      userId: req.user.id,
+      action: 'COMMENT_ADDED',
+      entityType: 'comment',
+      entityId: comment.id,
+      details: { noteId },
+      ipAddress: req.ip,
+      userAgent: req.get('User-Agent')
+    });
+
+    res.status(201).json(comment);
+  } catch (err) {
+    console.error('Error adding comment:', err);
+    res.status(500).json({ error: 'Internal error' });
+  }
+};
+
+export const deleteComment = async (req: any, res: Response) => {
+    // Left as exercise if needed (admins/owners)
+    res.status(501).json({ error: 'Not implemented' });
+};
+

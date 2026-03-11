@@ -25,4 +25,13 @@ router.patch('/:id', authenticate, NotesController.updateNote);
 router.get('/:id/tags', authenticate, TagsController.getNoteTags);
 router.post('/:id/tags', authenticate, authorize(['teacher', 'student', 'admin']), TagsController.updateNoteTags);
 
+// Reactions
+router.get('/:id/reactions/me', authenticate, NotesController.getUserReaction);
+router.post('/:id/reactions', authenticate, NotesController.addReaction);
+// router.delete('/:id/reactions', authenticate, NotesController.removeReaction); // Handled via toggle logic in POST
+
+// Comments
+router.get('/:id/comments', authenticate, NotesController.getComments);
+router.post('/:id/comments', authenticate, NotesController.addComment);
+
 export default router;
