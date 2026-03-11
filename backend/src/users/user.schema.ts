@@ -11,3 +11,9 @@ export const accountUpdateSchema = z.object({
   phone: z.string().max(20).optional(),
   password: z.string().min(12, "Password must be at least 12 chars").optional(),
 });
+
+export const profileUpdateSchema = z.object({
+  classe: z.string().max(50).optional(),
+  promotion: z.string().max(50).optional(),
+  niveau: z.string().max(20).optional(),
+});

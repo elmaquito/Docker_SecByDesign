@@ -16,6 +16,10 @@ router.put('/me', authenticate, UserController.updateAccount);
 
 // GDPR Routes
 router.get('/:id/export', authenticate, UserController.exportData);
-router.delete('/:id', authenticate, UserController.deleteUser);
+router.delete('/:id', authenticate, authorize(['admin']), UserController.deleteUser); // Only admin can delete
+
+// Profile Routes
+router.get('/:id/profile', authenticate, UserController.getUserProfile);
+router.put('/:id/profile', authenticate, UserController.updateUserProfile); // Self or admin
 
 export default router;

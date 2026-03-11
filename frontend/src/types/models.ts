@@ -34,6 +34,14 @@ export interface Note {
   updated_at: string;
   tags?: Tag[];
   reactions?: Reaction[];
+  
+  // UI states
+  _editing?: boolean;
+  _saving?: boolean;
+  _editedTitle?: string;
+  _editedContent?: string;
+  _comments?: any[];
+  _newComment?: string;
 }
 
 // Tag model (Unified Tags)

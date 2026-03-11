@@ -15,32 +15,58 @@
     </div>
 
     <div v-if="showFilters" class="filters-panel">
-      <div class="filter-section">
-        <h4>🏷️ Thèmes</h4>
+      <!-- Classes -->
+      <div v-if="tagStore.classes.length > 0" class="filter-section">
+        <h4>🎓 Classes</h4>
         <div class="filter-options">
-          <label v-for="theme in availableThemes" :key="theme.id" class="filter-checkbox">
-            <input type="checkbox" :value="theme.id" v-model="selectedThemes" />
-            <span :style="{ color: getThemeColorLocal(theme.color) }">{{ theme.name }}</span>
+          <label v-for="tag in tagStore.classes" :key="tag.id" class="filter-checkbox">
+            <input type="checkbox" :value="tag.id" v-model="selectedTags" />
+            <span>{{ tag.name }}</span>
           </label>
         </div>
       </div>
-      <div class="filter-section">
+
+      <!-- Spécialités -->
+      <div v-if="tagStore.specialites.length > 0" class="filter-section">
+        <h4>📚 Spécialités</h4>
+        <div class="filter-options">
+          <label v-for="tag in tagStore.specialites" :key="tag.id" class="filter-checkbox">
+            <input type="checkbox" :value="tag.id" v-model="selectedTags" />
+            <span :style="{ color: tag.meta?.color }">{{ tag.name }}</span>
+          </label>
+        </div>
+      </div>
+
+      <!-- Groupes -->
+      <div v-if="tagStore.groupes.length > 0" class="filter-section">
+        <h4>👥 Groupes</h4>
+        <div class="filter-options">
+          <label v-for="tag in tagStore.groupes" :key="tag.id" class="filter-checkbox">
+            <input type="checkbox" :value="tag.id" v-model="selectedTags" />
+            <span>{{ tag.name }}</span>
+          </label>
+        </div>
+      </div>
+
+      <!-- Catégories -->
+      <div v-if="tagStore.categories.length > 0" class="filter-section">
         <h4>📂 Catégories</h4>
         <div class="filter-options">
-          <label v-for="cat in availableCategories" :key="cat.id" class="filter-checkbox">
-            <input type="checkbox" :value="cat.id" v-model="selectedCategories" />
-            <span>{{ cat.name }}</span>
+          <label v-for="tag in tagStore.categories" :key="tag.id" class="filter-checkbox">
+            <input type="checkbox" :value="tag.id" v-model="selectedTags" />
+            <span>{{ tag.name }}</span>
           </label>
         </div>
       </div>
+
       <div class="filter-actions">
-        <button @click="applyFilters" class="btn-apply">Appliquer</button>
+        <button @click="showFilters = false" class="btn-apply">Fermer</button>
         <button @click="resetFilters" class="btn-reset">Reset</button>
       </div>
     </div>
 
     <div class="feed-content">
-      <div v-if="loading" class="loading">Chargement...</div>
+      <div v-if="noteStore.loading" class="loading">Chargement...</div>
       <div v-else-if="filteredNotes.length === 0" class="empty-state">
         <p>📝 Aucune note à afficher</p>
       </div>
@@ -57,58 +83,26 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
+import { storeToRefs } from 'pinia'
 import NoteCard from './NoteCard.vue'
-import { getThemeColor } from '../utils/theme.js'
-import { API_V1_BASE_URL } from '../config/api.js'
+import { useNoteStore } from '../stores/note'
+import { useTagStore } from '../stores/tag'
 
 const props = defineProps(['user'])
 const emit = defineEmits(['view-note'])
 
-const notes = ref([])
-const loading = ref(false)
+const noteStore = useNoteStore()
+const tagStore = useTagStore()
+const { notes } = storeToRefs(noteStore)
+
 const searchQuery = ref('')
 const showFilters = ref(false)
-const selectedThemes = ref([])
-const selectedCategories = ref([])
-const availableThemes = ref([])
-const availableCategories = ref([])
+const selectedTags = ref<number[]>([])
 
 const fetchNotes = async () => {
-  loading.value = true
-  try {
-    const res = await fetch(`${API_V1_BASE_URL}/notes`, { credentials: 'include' })
-    if (res.ok) {
-      notes.value = await res.json()
-    }
-  } catch (e) {
-    console.error('Failed to load notes', e)
-  } finally {
-    loading.value = false
-  }
-}
-
-const fetchThemes = async () => {
-  try {
-    const res = await fetch(`${API_V1_BASE_URL}/themes`, { credentials: 'include' })
-    if (res.ok) {
-      availableThemes.value = await res.json()
-    }
-  } catch (e) {
-    console.error('Failed to load themes', e)
-  }
-}
-
-const fetchCategories = async () => {
-  try {
-    const res = await fetch(`${API_V1_BASE_URL}/categories`, { credentials: 'include' })
-    if (res.ok) {
-      availableCategories.value = await res.json()
-    }
-  } catch (e) {
-    console.error('Failed to load categories', e)
-  }
+  await noteStore.fetchNotes()
 }
 
 const filteredNotes = computed(() => {
@@ -122,47 +116,31 @@ const filteredNotes = computed(() => {
     )
   }
   
-  // Apply theme filters
-  if (selectedThemes.value.length > 0) {
-    result = result.filter(n => 
-      n.themes && n.themes.some(t => selectedThemes.value.includes(t.id))
-    )
-  }
-  
-  // Apply category filters
-  if (selectedCategories.value.length > 0) {
-    result = result.filter(n => 
-      n.categories && n.categories.some(c => selectedCategories.value.includes(c.id))
-    )
+  if (selectedTags.value.length > 0) {
+    result = result.filter(n => {
+      if (!n.tags) return false
+      return n.tags.some(t => selectedTags.value.includes(t.id))
+    })
   }
   
   return result
 })
 
-const getThemeColorLocal = getThemeColor
-
-const applyFilters = () => {
-  // Filters would be applied here
-  showFilters.value = false
-}
-
 const resetFilters = () => {
-  selectedThemes.value = []
-  selectedCategories.value = []
+  selectedTags.value = []
 }
 
-const handleComment = (noteId) => {
+const handleComment = (noteId: number) => {
   emit('view-note', noteId)
 }
 
-const handleView = (noteId) => {
+const handleView = (noteId: number) => {
   emit('view-note', noteId)
 }
 
 onMounted(() => {
   fetchNotes()
-  fetchThemes()
-  fetchCategories()
+  tagStore.fetchTags()
 })
 </script>
 

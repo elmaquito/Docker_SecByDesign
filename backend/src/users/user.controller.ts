@@ -3,7 +3,7 @@ import argon2 from 'argon2';
 import { z } from 'zod';
 import { pool } from '../config/database';
 import { AuditLogger } from '../common/audit';
-import { userCreateSchema, accountUpdateSchema } from './user.schema';
+import { userCreateSchema, accountUpdateSchema, profileUpdateSchema } from './user.schema';
 
 export const createUser = async (req: any, res: Response) => {
   try {
@@ -187,6 +187,77 @@ export const deleteUser = async (req: any, res: Response) => {
   } catch (err) {
     console.error('Error deleting user:', err);
     res.status(500).json({ error: 'Internal error' });
+  }
+};
+
+export const listProfiles = async (req: any, res: Response) => {
+  try {
+    const result = await pool.query(`
+      SELECT p.*, u.username, u.role 
+      FROM profiles p
+      JOIN users u ON p.user_id = u.id
+    `);
+    res.json(result.rows);
+  } catch (_err) {
+    res.status(500).json({ error: 'Internal error' });
+  }
+};
+
+export const getUserProfile = async (req: any, res: Response) => {
+  const userId = parseInt(req.params.id);
+
+  try {
+    const result = await pool.query(
+      `SELECT p.*, u.username, u.role 
+       FROM profiles p
+       JOIN users u ON p.user_id = u.id
+       WHERE p.user_id = $1`,
+      [userId]
+    );
+
+    if (result.rows.length === 0) {
+      // If no profile exists, return basic user info if user exists
+      const userRes = await pool.query('SELECT id, username, role FROM users WHERE id = $1', [userId]);
+      if (userRes.rows.length === 0) return res.status(404).json({ error: 'User not found' });
+      return res.json({ ...userRes.rows[0], profile: null });
+    }
+
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error('Error fetching profile:', err);
+    res.status(500).json({ error: 'Internal error' });
+  }
+};
+
+export const updateUserProfile = async (req: any, res: Response) => {
+  const userId = parseInt(req.params.id);
+
+  // Security check: Only admin or the user themselves can edit
+  if (req.user.role !== 'admin' && req.user.id !== userId) {
+     return res.status(403).json({ error: 'Forbidden' });
+  }
+
+  try {
+    const { classe, promotion, niveau } = profileUpdateSchema.parse(req.body);
+
+    const result = await pool.query(
+      `INSERT INTO profiles (user_id, classe, promotion, niveau)
+       VALUES ($1, $2, $3, $4)
+       ON CONFLICT (user_id) 
+       DO UPDATE SET 
+         classe = EXCLUDED.classe,
+         promotion = EXCLUDED.promotion,
+         niveau = EXCLUDED.niveau,
+         updated_at = NOW()
+       RETURNING *`,
+      [userId, classe, promotion, niveau]
+    );
+
+    res.json(result.rows[0]);
+  } catch (err) {
+     if (err instanceof z.ZodError) return res.status(400).json({ error: err.errors });
+     console.error('Error updating profile:', err);
+     res.status(500).json({ error: 'Internal error' });
   }
 };
 

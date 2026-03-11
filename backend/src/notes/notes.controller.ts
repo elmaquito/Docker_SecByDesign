@@ -16,7 +16,13 @@ export const listNotes = async (req: any, res: Response) => {
       query = `
         SELECT n.*, u.role AS owner_role, u.username as owner_username,
                t.id as theme_id, t.name as theme_name, t.color as theme_color,
-               c.id as category_id, c.name as category_name
+               c.id as category_id, c.name as category_name,
+               (
+                 SELECT json_agg(json_build_object('id', tg.id, 'name', tg.name, 'type', tg.type, 'meta', tg.meta))
+                 FROM note_tags nt 
+                 JOIN tags tg ON nt.tag_id = tg.id 
+                 WHERE nt.note_id = n.id
+               ) as tags
         FROM notes n 
         JOIN users u ON n.user_id = u.id 
         LEFT JOIN note_themes nt ON n.id = nt.note_id
@@ -30,7 +36,13 @@ export const listNotes = async (req: any, res: Response) => {
       query = `
         SELECT n.*, u.role AS owner_role, u.username as owner_username,
                t.id as theme_id, t.name as theme_name, t.color as theme_color,
-               c.id as category_id, c.name as category_name
+               c.id as category_id, c.name as category_name,
+               (
+                 SELECT json_agg(json_build_object('id', tg.id, 'name', tg.name, 'type', tg.type, 'meta', tg.meta))
+                 FROM note_tags nt 
+                 JOIN tags tg ON nt.tag_id = tg.id 
+                 WHERE nt.note_id = n.id
+               ) as tags
         FROM notes n 
         JOIN users u ON n.user_id = u.id 
         LEFT JOIN note_themes nt ON n.id = nt.note_id
@@ -47,7 +59,13 @@ export const listNotes = async (req: any, res: Response) => {
       query = `
         SELECT n.*, u.role AS owner_role, u.username as owner_username,
                t.id as theme_id, t.name as theme_name, t.color as theme_color,
-               c.id as category_id, c.name as category_name
+               c.id as category_id, c.name as category_name,
+               (
+                 SELECT json_agg(json_build_object('id', tg.id, 'name', tg.name, 'type', tg.type, 'meta', tg.meta))
+                 FROM note_tags nt 
+                 JOIN tags tg ON nt.tag_id = tg.id 
+                 WHERE nt.note_id = n.id
+               ) as tags
         FROM notes n 
         JOIN users u ON n.user_id = u.id 
         LEFT JOIN note_themes nt ON n.id = nt.note_id
@@ -71,6 +89,7 @@ export const listNotes = async (req: any, res: Response) => {
       created_at: r.created_at,
       theme: r.theme_id ? { id: r.theme_id, name: r.theme_name, color: r.theme_color } : null,
       category: r.category_id ? { id: r.category_id, name: r.category_name } : null,
+      tags: r.tags || [],
       owner_role: r.owner_role,
       owner_username: r.owner_username,
       reactions_up: r.reactions_up || 0,

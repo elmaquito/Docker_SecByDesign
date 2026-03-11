@@ -30,11 +30,11 @@
       </div>
       <div class="profile-stats">
         <div class="stat-item">
-          <div class="stat-value">{{ notes.length }}</div>
+          <div class="stat-value">{{ myNotes.length }}</div>
           <div class="stat-label">Notes</div>
         </div>
         <div class="stat-item">
-          <div class="stat-value">{{ totalComments }}</div>
+          <div class="stat-value">{{ totalMyComments }}</div>
           <div class="stat-label">Commentaires</div>
         </div>
       </div>
@@ -51,46 +51,46 @@
         <h2>📝 Mes Notes</h2>
       </div>
       
-      <div v-if="notes.length === 0" class="empty-state">
+      <div v-if="myNotes.length === 0" class="empty-state">
         <p>Aucune note pour le moment.</p>
         <button @click="showCreateModal = true" class="btn-create">Créer votre première note</button>
       </div>
       
       <div v-else class="notes-list">
-        <div v-for="note in notes" :key="note.id" class="note-card">
+        <div v-for="note in myNotes" :key="note.id" class="note-card">
           <div class="note-header">
             <div style="display:flex; gap:12px; align-items:center">
-              <h4 v-if="!note._editing">{{ note.title }}</h4>
-              <input v-if="note._editing" v-model="note._editedTitle" class="edit-input" />
+              <h4 v-if="!(note as any)._editing">{{ note.title }}</h4>
+              <input v-if="(note as any)._editing" v-model="(note as any)._editedTitle" class="edit-input" />
               <small style="color:#666">{{ new Date(note.created_at).toLocaleString('fr-FR') }}</small>
             </div>
             <div class="note-actions">
-              <button v-if="canEdit(note) && !note._editing" @click="startEdit(note)" class="btn-icon">✏️</button>
-              <button v-if="note._editing" @click="saveEdit(note)" :disabled="note._saving" class="btn-icon">
-                {{ note._saving ? '⏳' : '💾' }}
+              <button v-if="canEdit(note) && !(note as any)._editing" @click="startEdit(note)" class="btn-icon">✏️</button>
+              <button v-if="(note as any)._editing" @click="saveEdit(note)" :disabled="(note as any)._saving" class="btn-icon">
+                {{ (note as any)._saving ? '⏳' : '💾' }}
               </button>
-              <button v-if="note._editing" @click="cancelEdit(note)" class="btn-icon">❌</button>
-              <button @click="deleteNote(note.id)" class="btn-icon delete">🗑️</button>
+              <button v-if="(note as any)._editing" @click="cancelEdit(note)" class="btn-icon">❌</button>
+              <button v-if="canEdit(note)" @click="deleteNote(note.id)" class="btn-icon delete">🗑️</button>
             </div>
           </div>
-          <div v-if="!note._editing" class="note-content">
+          <div v-if="!(note as any)._editing" class="note-content">
             <p>{{ note.content }}</p>
           </div>
           <div v-else>
-            <textarea v-model="note._editedContent" class="edit-textarea"></textarea>
+            <textarea v-model="(note as any)._editedContent" class="edit-textarea"></textarea>
           </div>
 
           <!-- Comments -->
           <div class="comments-section">
-            <h5>💬 Commentaires ({{ note._comments?.length || 0 }})</h5>
-            <div v-if="note._comments && note._comments.length === 0" class="empty-comments">Aucun commentaire</div>
-            <div v-for="c in note._comments" :key="c.id" class="comment">
+            <h5>💬 Commentaires ({{ (note as any)._comments?.length || 0 }})</h5>
+            <div v-if="(note as any)._comments && (note as any)._comments.length === 0" class="empty-comments">Aucun commentaire</div>
+            <div v-for="c in (note as any)._comments" :key="c.id" class="comment">
               <strong>{{ c.username }}</strong>: {{ c.content }}
               <small>— {{ new Date(c.created_at).toLocaleString('fr-FR') }}</small>
             </div>
 
             <div class="comment-form">
-              <input v-model="note._newComment" placeholder="Écrire un commentaire..." class="comment-input" />
+              <input v-model="(note as any)._newComment" placeholder="Écrire un commentaire..." class="comment-input" />
               <button @click="postComment(note)" class="btn-comment">Publier</button>
             </div>
           </div>
@@ -163,30 +163,43 @@
   </div>
 </template>
 
-<script setup>
-import { ref, reactive, onMounted, computed } from 'vue'
+<script setup lang="ts">
+import { ref, reactive, onMounted, computed, defineProps } from 'vue'
+import { storeToRefs } from 'pinia'
 import Feed from './Feed.vue'
 import AccountSettings from './AccountSettings.vue'
-import { initializeNoteState } from '../utils/theme.js'
-import { API_V1_BASE_URL } from '../config/api.js'
+import { useNoteStore } from '../stores/note'
+import { useUserStore } from '../stores/user'
+import { useAuthStore } from '../stores/auth'
+import type { Note } from '../types/models'
 
 const props = defineProps(['user'])
-const notes = ref([])
-const users = ref([])
-const newNote = reactive({ title: '', content: '' })
-const newUser = reactive({ username: '', password: '', role: 'student' })
 const activeView = ref('feed')
 const showCreateModal = ref(false)
+const newNote = reactive({ title: '', content: '' })
+const newUser = reactive({ username: '', password: '', role: 'student' })
 const isSaving = ref(false)
 const saveError = ref('')
 
-const canManageUsers = computed(() => ['admin', 'technician'].includes(props.user.role))
-const totalComments = computed(() => {
-  return notes.value.reduce((sum, note) => sum + (note._comments?.length || 0), 0)
+// Utilize Stores
+const noteStore = useNoteStore()
+const userStore = useUserStore()
+const { notes } = storeToRefs(noteStore)
+const { users } = storeToRefs(userStore)
+
+// We filter notes for "my notes" based on the logged in user
+const myNotes = computed(() => {
+  if (!props.user) return []
+  return notes.value.filter(n => n.user_id === props.user.id)
 })
 
-const getRoleLabel = (role) => {
-  const labels = {
+const canManageUsers = computed(() => ['admin', 'technician'].includes(props.user.role))
+const totalMyComments = computed(() => {
+  return myNotes.value.reduce((sum, note) => sum + (note._comments?.length || 0), 0)
+})
+
+const getRoleLabel = (role: string) => {
+  const labels: any = {
     admin: 'Administrateur',
     technician: 'Technicien',
     teacher: 'Enseignant',
@@ -195,115 +208,58 @@ const getRoleLabel = (role) => {
   return labels[role] || role
 }
 
-const viewNote = (noteId) => {
-  // Switch to my-notes view and potentially scroll to the note
+const viewNote = (noteId: number) => {
   activeView.value = 'my-notes'
 }
 
+// User Actions
 const fetchUsers = async () => {
   if (!canManageUsers.value) return
-  try {
-    const res = await fetch(`${API_V1_BASE_URL}/users`, { credentials: 'include' })
-    if (res.ok) {
-      users.value = await res.json()
-    }
-  } catch (e) {
-    console.error(e)
-  }
+  await userStore.fetchUsers() // This populates userStore.users, kept in sync via storeToRefs
 }
 
 const createUser = async () => {
   try {
-    const res = await fetch(`${API_V1_BASE_URL}/users`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(newUser),
-      credentials: 'include'
-    })
-    
-    if (res.ok) {
-      const savedUser = await res.json()
-      users.value.push(savedUser)
-      newUser.username = ''
-      newUser.password = ''
-      newUser.role = 'student'
-    } else {
-      const data = await res.json()
-      alert(data.error || 'Failed to create user')
-    }
-  } catch (e) {
-    alert('Failed to create user')
+    await userStore.createUser(newUser)
+    newUser.username = ''
+    newUser.password = ''
+    newUser.role = 'student'
+  } catch (e: any) {
+    alert(e.message || 'Failed to create user')
   }
 }
 
+// Note Actions
 const fetchNotes = async () => {
-  try {
-    const res = await fetch(`${API_V1_BASE_URL}/notes`, { credentials: 'include' })
-    if (res.ok) {
-      const data = await res.json()
-      // initialize editing/comments state using helper
-      notes.value = data.map(initializeNoteState)
-      // fetch comments for visible notes
-      for (const n of notes.value) {
-        await fetchComments(n)
-      }
-    }
-  } catch (e) {
-    console.error('Failed to fetch notes:', e)
+  await noteStore.fetchNotes()
+  // Fetch comments for my notes
+  for (const n of myNotes.value) {
+    await noteStore.fetchComments(n.id)
   }
 }
 
 const createNote = async () => {
   isSaving.value = true
   saveError.value = ''
-  
   try {
-    const res = await fetch(`${API_V1_BASE_URL}/notes`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(newNote),
-      credentials: 'include'
-    })
-    
-    if (res.ok) {
-      const savedNote = await res.json()
-      notes.value.unshift(initializeNoteState(savedNote))
-      newNote.title = ''
-      newNote.content = ''
-      showCreateModal.value = false
-      activeView.value = 'my-notes'
-    } else {
-      const data = await res.json()
-      saveError.value = data.error || 'Erreur lors de l\'enregistrement'
-      console.error('Échec de l\'enregistrement:', data.error || 'Erreur inconnue')
-    }
-  } catch (e) {
-    saveError.value = 'Erreur de connexion au serveur'
-    console.error('Échec de l\'enregistrement de la note:', e)
+    await noteStore.createNote(newNote)
+    newNote.title = ''
+    newNote.content = ''
+    showCreateModal.value = false
+    activeView.value = 'my-notes'
+  } catch (e: any) {
+    saveError.value = e.message || 'Error creating note'
   } finally {
     isSaving.value = false
   }
 }
 
-const deleteNote = async (id) => {
-  if (!confirm('Delete this note?')) return
-  try {
-    const res = await fetch(`${API_V1_BASE_URL}/notes/${id}`, {
-      method: 'DELETE',
-      credentials: 'include'
-    })
-    if (res.ok) {
-      notes.value = notes.value.filter(n => n.id !== id)
-    } else {
-      alert('Failed to delete (Permission denied?)')
-    }
-  } catch (e) {
-    console.error(e)
-  }
+const deleteNote = async (id: number) => {
+  if (!confirm('Are you sure you want to delete this note?')) return
+  await noteStore.deleteNote(id)
 }
 
-const canEdit = (note) => {
-  // admin can edit everything; owner can edit; teacher can edit student notes
+const canEdit = (note: any) => {
   const role = props.user.role
   if (role === 'admin' || role === 'technician') return true
   if (note.user_id === props.user.id) return true
@@ -311,78 +267,39 @@ const canEdit = (note) => {
   return false
 }
 
-const startEdit = (note) => {
+const startEdit = (note: any) => {
   note._editing = true
   note._editedTitle = note.title
   note._editedContent = note.content
 }
 
-const cancelEdit = (note) => {
+const cancelEdit = (note: any) => {
   note._editing = false
 }
 
-const saveEdit = async (note) => {
-  if (note._saving) return // Prevent double-submit
-  
+const saveEdit = async (note: any) => {
+  if (note._saving) return
   note._saving = true
-  note._saveError = ''
-  
   try {
-    const res = await fetch(`${API_V1_BASE_URL}/notes/${note.id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      body: JSON.stringify({ title: note._editedTitle, content: note._editedContent })
+    await noteStore.updateNote(note.id, {
+      title: note._editedTitle,
+      content: note._editedContent
     })
-    if (res.ok) {
-      const updated = await res.json()
-      note.title = updated.title
-      note.content = updated.content
-      note._editing = false
-    } else {
-      const data = await res.json()
-      note._saveError = data.error || 'Échec de l\'enregistrement'
-      alert(note._saveError)
-    }
-  } catch (e) {
-    note._saveError = 'Erreur de connexion au serveur'
-    alert(note._saveError)
+    note._editing = false
+  } catch (e: any) {
+    alert(e.message || 'Failed to update note')
   } finally {
     note._saving = false
   }
 }
 
-const fetchComments = async (note) => {
-  try {
-    const res = await fetch(`${API_V1_BASE_URL}/notes/${note.id}/comments`, { credentials: 'include' })
-    if (res.ok) {
-      note._comments = await res.json()
-    }
-  } catch (e) {
-    console.error('Failed to load comments', e)
-  }
-}
-
-const postComment = async (note) => {
+const postComment = async (note: any) => {
   if (!note._newComment || note._newComment.trim() === '') return
   try {
-    const res = await fetch(`${API_V1_BASE_URL}/notes/${note.id}/comments`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      body: JSON.stringify({ content: note._newComment })
-    })
-    if (res.ok) {
-      const c = await res.json()
-      // append and clear
-      note._comments.push({ ...c, username: (props.user && props.user.username) || 'you' })
-      note._newComment = ''
-    } else {
-      const data = await res.json()
-      alert(data.error || 'Failed to post comment')
-    }
-  } catch (e) {
-    alert('Failed to post comment')
+    await noteStore.addComment(note.id, note._newComment)
+    note._newComment = ''
+  } catch (e: any) {
+    alert(e.message || 'Failed to post comment')
   }
 }
 

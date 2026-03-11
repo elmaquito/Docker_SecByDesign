@@ -16,17 +16,17 @@
       <p>{{ getExcerpt }}</p>
     </div>
 
-    <div v-if="note.themes && note.themes.length > 0" class="note-tags">
+    <div v-if="(note.tags && note.tags.length > 0) || (note.themes && note.themes.length > 0)" class="note-tags">
       <span class="tag-label">🏷️</span>
       <span 
-        v-for="theme in displayThemes" 
-        :key="theme.id" 
+        v-for="tag in displayTags" 
+        :key="tag.id || tag.name" 
         class="theme-badge"
-        :style="{ backgroundColor: getThemeColorLocal(theme.color) }"
+        :style="{ backgroundColor: getTagColor(tag) }"
       >
-        {{ theme.name }}
+        {{ tag.name }}
       </span>
-      <span v-if="note.themes.length > 3" class="more-tags">+{{ note.themes.length - 3 }}</span>
+      <span v-if="remainingTags > 0" class="more-tags">+{{ remainingTags }}</span>
     </div>
 
     <div class="note-footer">
@@ -82,10 +82,28 @@ const getExcerpt = computed(() => {
   return props.note.content.substring(0, maxLength) + '...'
 })
 
-const displayThemes = computed(() => {
-  if (!props.note.themes) return []
-  return props.note.themes.slice(0, 3)
+const displayTags = computed(() => {
+  let tags = []
+  if (props.note.tags && props.note.tags.length > 0) {
+    tags = props.note.tags
+  } else if (props.note.themes && props.note.themes.length > 0) {
+    tags = props.note.themes
+  }
+  return tags.slice(0, 3)
 })
+
+const remainingTags = computed(() => {
+  let count = 0
+  if (props.note.tags) count = props.note.tags.length
+  else if (props.note.themes) count = props.note.themes.length
+  return Math.max(0, count - 3)
+})
+
+const getTagColor = (tag) => {
+  if (tag.meta && tag.meta.color) return tag.meta.color
+  if (tag.color) return getThemeColor(tag.color) // legacy theme object
+  return '#3498db'
+}
 
 const formatDate = (dateString) => {
   const date = new Date(dateString)
