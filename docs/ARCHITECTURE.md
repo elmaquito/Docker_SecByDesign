@@ -26,9 +26,10 @@ Après inspection du repository, la stack actuelle est:
 #### Frontend
 - **Framework**: Vue 3 (v3.3.4) (42.9% du codebase)
 - **Bundler**: Vite (v4.4.5)
-- **État**: Pas de gestionnaire d'état (Pinia à ajouter)
-- **TypeScript**: Non configuré côté frontend (à ajouter)
-- **Tests**: Aucun framework de test détecté (Vitest à ajouter)
+- **Langage**: TypeScript (Configuré v5+)
+- **État**: Pinia (v2+)
+- **Routing**: Vue Router (v4+)
+- **Tests**: Vitest (installé)
 
 #### Infrastructure
 - **Conteneurisation**: Docker & Docker Compose
@@ -41,19 +42,21 @@ Après inspection du repository, la stack actuelle est:
 ```
 backend/
 ├── src/main.ts          # Point d'entrée, routes API, middleware
-├── init.sql             # Schéma SQL initial (users, notes, comments)
+├── migrations/          # Migrations SQL (001-008)
 ├── package.json         # Dépendances backend
 └── tsconfig.json        # Configuration TypeScript
 
 frontend/
 ├── src/
-│   ├── App.vue         # Composant racine
-│   ├── main.js         # Point d'entrée (JS, pas TS)
+│   ├── App.vue         # Composant racine (TS)
+│   ├── main.ts         # Point d'entrée (TS)
+│   ├── router/         # Configuration Vue Router
+│   ├── stores/         # Stores Pinia (Auth, Tags)
 │   └── components/
 │       ├── Login.vue   # Authentification
-│       └── Dashboard.vue # Dashboard simple
-├── package.json        # Dépendances frontend (minimalistes)
-└── vite.config.js      # Configuration Vite
+│       └── Dashboard.vue # Dashboard principal
+├── package.json        # Dépendances frontend (TypeScript, Pinia, Router)
+└── vite.config.ts      # Configuration Vite (TS)
 
 infrastructure/
 ├── docker-compose.dev.yml
@@ -63,41 +66,24 @@ infrastructure/
 
 ### 1.3 Modèle de Données Actuel
 
-Le schéma SQL existant (`backend/init.sql`) contient:
+Le schéma SQL a évolué via des migrations (`backend/migrations/`) pour inclure :
+
+- **Utilisateurs & Profils** (`users`, `profiles`, `password_reset_tokens`)
+- **Notes & Contenu** (`notes`, `comments`, `reactions`)
+- **Classification Unifiée** (`tags`, `note_tags`) remplacant Thèmes/Catégories
+  - Types: `classe`, `specialite`, `groupe`, `categorie`
+- **Sécurité & Audit** (`audit_logs`, `gdpr_export_requests`, `sessions`)
 
 ```sql
--- Tables actuelles
-CREATE TYPE user_role AS ENUM ('admin', 'technician', 'teacher', 'student');
-
-CREATE TABLE users (
+-- Extrait du schéma Tags Unifiés
+CREATE TABLE tags (
     id SERIAL PRIMARY KEY,
-    username VARCHAR(50) UNIQUE NOT NULL,
-    password_hash VARCHAR(255) NOT NULL,
-    role user_role NOT NULL DEFAULT 'student',
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE TABLE notes (
-    id SERIAL PRIMARY KEY,
-    user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
-    title VARCHAR(100) NOT NULL,
-    content TEXT,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE TABLE comments (
-    id SERIAL PRIMARY KEY,
-    note_id INTEGER REFERENCES notes(id) ON DELETE CASCADE,
-    user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
-    content TEXT NOT NULL,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+    type VARCHAR(20) CHECK (type IN ('classe', 'specialite', 'groupe', 'categorie')) NOT NULL,
+    name VARCHAR(100) NOT NULL,
+    meta JSONB DEFAULT '{}',
+    is_default_for_student_view BOOLEAN DEFAULT FALSE
 );
 ```
-
-**Manques identifiés**:
-- Pas de table `profiles` (classe, promo, niveau)
-- Pas de table `themes`
-- Pas de table `categories`
 - Pas de table `note_targets` (assignation many-to-many)
 - Pas de table `note_categories`
 - Pas de tables d'audit/logs

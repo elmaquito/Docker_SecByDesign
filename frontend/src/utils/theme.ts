@@ -1,7 +1,8 @@
 // Shared theme color utilities
+import type { Note } from '../types/models'
 
-export const getThemeColor = (color) => {
-  const colors = {
+export const getThemeColor = (color: string): string => {
+  const colors: Record<string, string> = {
     red: '#e74c3c',
     blue: '#3498db',
     purple: '#9b59b6',
@@ -14,10 +15,14 @@ export const getThemeColor = (color) => {
   return colors[color] || '#3498db'
 }
 
-export const initializeNoteState = (note) => {
+export const initializeNoteState = (note: Note): Note & { _editing: boolean; _saving: boolean; _comments: any[] } => {
   return {
     ...note,
     _editing: false,
+    _saving: false,
+    _comments: []
+  }
+}
     _editedTitle: note.title,
     _editedContent: note.content,
     _comments: [],

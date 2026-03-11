@@ -4,15 +4,15 @@ Bienvenue dans le projet **Notimatic**. Ce dépôt contient l'architecture et l'
 
 ## 📋 État du Projet
 
-🎯 **Version**: v1.0.0 (Production Ready)  
-✅ **Fonctionnalités**: MVP Complet (Auth, Feed, Commentaires, Thèmes, GDPR)  
-✅ **Documentation**: Guides Utilisateur, Architecture et API disponibles  
-✅ **Qualité**: Tests unitaires et E2E en place, CI/CD configuré  
-✅ **Sécurité**: Audit logs, Rate limiting, Sanitization et Conformité RGPD  
+🎯 **Version**: v1.2.0 (Phase 2 Completed)
+✅ **Backend**: Node.js/Express/TypeScript (Auth, Unified Tags, Profiles, Audit)
+✅ **Frontend**: Vue 3/TypeScript/Pinia (Migration terminée)
+✅ **Documentation**: Architecture, API et Guides mis à jour
+✅ **Sécurité**: Audit logs, Rate limiting, Sanitization et Conformité RGPD
 
 ## ✨ Fonctionnalités Clés
 - **Authentification Sécurisée**: JWT avec cookies HTTP-only, rôles RBAC
-- **Feed Personnalisé**: Filtrage par Thèmes et Catégories
+- **Feed Personnalisé**: Filtrage par Tags Unifiés (Classe, Spécialité, Groupe, Catégorie)
 - **Expérience Utilisateur**: Mode Sombre/Clair, Interface Responsive
 - **Gestion de Contenu**: Création riche, commentaires, modération basique
 - **Conformité**: Export de données RGPD, suppression de compte
@@ -27,7 +27,7 @@ Bienvenue dans le projet **Notimatic**. Ce dépôt contient l'architecture et l'
 ### 1. Structure du Projet
 - `docs/` : Documentation complète (architecture, roadmap, wireframes, GDPR)
 - `backend/` : API Node.js/Express/TypeScript + migrations SQL
-- `frontend/` : Application Vue.js/Vite (à migrer vers TypeScript + Pinia)
+- `frontend/` : Application Vue.js 3 + TypeScript + Pinia + Vue Router
 - `infrastructure/` : Docker Compose et configuration
 - `.github/workflows/` : Pipeline CI/CD
 

@@ -26,18 +26,19 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import Login from './components/Login.vue'
 import Dashboard from './components/Dashboard.vue'
 import ForgotPassword from './components/ForgotPassword.vue'
 import ResetPassword from './components/ResetPassword.vue'
 import Loader from './components/Loader.vue'
-import { API_V1_BASE_URL } from './config/api.js'
-import { useTheme } from './composables/useTheme.js'
+import { API_V1_BASE_URL } from './config/api'
+import { useTheme } from './composables/useTheme'
+import type { User } from './types/models'
 
 const { isDarkMode, toggleTheme } = useTheme()
-const user = ref(null)
+const user = ref<User | null>(null)
 const loading = ref(true)
 const showForgotPassword = ref(false)
 const showResetPassword = ref(false)

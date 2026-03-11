@@ -44,11 +44,14 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, reactive } from 'vue'
-import { API_BASE_URL } from '../config/api.js'
+import { API_BASE_URL } from '../config/api'
 
-const emit = defineEmits(['login-success', 'forgot-password'])
+const emit = defineEmits<{
+  (e: 'login-success', user: any): void
+  (e: 'forgot-password'): void
+}>()
 
 const isSetup = ref(false)
 const submitting = ref(false)
@@ -95,8 +98,8 @@ const submit = async () => {
     } else {
       emit('login-success', data.user)
     }
-  } catch (e) {
-    error.value = e.message
+  } catch (e: any) {
+    error.value = e.message || 'An error occurred'
   } finally {
     submitting.value = false
   }

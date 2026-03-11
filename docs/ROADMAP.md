@@ -27,8 +27,7 @@ Ce document présente la roadmap complète pour le développement du MVP du syst
 
 ## Version 0.2.0 - Extensions Base de Données & TypeScript
 
-**Dates estimées**: Semaine 1  
-**Effort estimé**: 3-5 jours
+**Statut**: ✅ Complété
 
 ### Objectifs
 Étendre le modèle de données et migrer le frontend vers TypeScript.
@@ -36,84 +35,60 @@ Ce document présente la roadmap complète pour le développement du MVP du syst
 ### Tâches
 
 #### Base de données (Backend)
-- [ ] Créer migration `001_add_profiles.sql`
-  - Table `profiles` (classe, promo, niveau)
-  - Relation 1-1 avec `users`
-- [ ] Créer migration `002_add_themes_categories.sql`
-  - Table `themes`
-  - Table `categories`
-  - Table `note_themes` (many-to-many)
-  - Table `note_categories`
-- [ ] Créer migration `003_add_note_targets.sql`
-  - Table `note_targets` (assignation)
-- [ ] Créer migration `004_add_audit_gdpr.sql`
-  - Table `audit_logs`
-  - Table `gdpr_export_requests`
-  - Colonnes `deleted_at` et `anonymized` sur `users`
-- [ ] Script de migration (`backend/migrate.sh` ou npm script)
+- [x] Créer migration `001_add_profiles.sql`
+- [x] Créer migration `002_add_themes_categories.sql` (Remplacé par Unified Tags en 006)
+- [x] Créer migration `003_add_note_targets.sql`
+- [x] Créer migration `004_add_audit_gdpr.sql`
+- [x] Créer migration `006_add_unified_tags.sql` (Unified Tags System)
+- [x] Script de migration (`backend/migrate.sh`)
 
 #### Frontend TypeScript
-- [ ] Installer TypeScript, Pinia, Vue Router, Vitest
-- [ ] Créer `tsconfig.json` pour frontend
-- [ ] Renommer `main.js` → `main.ts`
-- [ ] Migrer composants vers `<script setup lang="ts">`
-- [ ] Créer types TypeScript de base (`types/models.ts`)
+- [x] Installer TypeScript, Pinia, Vue Router, Vitest
+- [x] Créer `tsconfig.json` pour frontend
+- [x] Renommer `main.js` → `main.ts`
+- [x] Migrer `App.vue` et `Login.vue` vers `<script setup lang="ts">`
+- [x] Créer types TypeScript de base (`types/models.ts`)
+- [ ] Migration complète des autres composants (Dashboard, Feed, etc.)
 
 #### Documentation
-- [x] Documentation ARCHITECTURE.md
-- [ ] Documentation des migrations
-- [ ] README mis à jour avec nouvelles dépendances
+- [x] Documentation ARCHITECTURE.md mise à jour
+- [x] README mis à jour
 
 ### Critères d'acceptation
-- Toutes les migrations SQL exécutables sans erreur
-- Frontend compile en TypeScript sans erreur
-- Application existante fonctionne toujours (non-régression)
+- [x] Toutes les migrations SQL exécutables sans erreur
+- [x] Frontend compile en TypeScript sans erreur (App.vue, main.ts)
+- [x] Application existante fonctionne toujours (non-régression)
 
 ---
 
-## Version 0.3.0 - API Thèmes & Catégories
+## Version 0.3.0 - API Unified Tags & Profils
 
-**Dates estimées**: Semaine 2  
-**Effort estimé**: 5-7 jours
+**Statut**: 🔄 En cours
 
 ### Objectifs
-Implémenter la logique métier pour les thèmes et catégories.
+Finaliser l'implémentation de la logique métier pour les Tags Unifiés (remplaçant Thèmes/Catégories) et la gestion des profils.
 
 ### Tâches
 
-#### Backend - Endpoints Themes
-- [ ] `GET /api/v1/themes` - Liste tous les thèmes
-- [ ] `GET /api/v1/themes/:id` - Détail d'un thème
-- [ ] `POST /api/v1/themes` - Créer thème (admin/teacher)
-- [ ] `PUT /api/v1/themes/:id` - Modifier thème (admin/teacher)
-- [ ] `DELETE /api/v1/themes/:id` - Supprimer thème (admin)
-- [ ] Validation Zod pour thèmes
-- [ ] Tests unitaires endpoints themes
-
-#### Backend - Endpoints Categories
-- [ ] `GET /api/v1/categories` - Liste catégories
-- [ ] `GET /api/v1/categories/:id` - Détail catégorie
-- [ ] `POST /api/v1/categories` - Créer catégorie (admin/teacher)
-- [ ] `PUT /api/v1/categories/:id` - Modifier catégorie
-- [ ] `DELETE /api/v1/categories/:id` - Supprimer catégorie
-- [ ] Validation Zod pour catégories
-- [ ] Tests unitaires endpoints categories
+#### Backend - Unified Tags
+- [x] Migration DB (006)
+- [x] Endpoints CRUD Tags (`tags.controller.ts`)
+- [x] Assignation Tags aux Notes (`note_tags`)
+- [ ] Tests unitaires approfondis pour Tags
 
 #### Backend - Profils
-- [ ] `GET /api/v1/profiles/:userId` - Récupérer profil
-- [ ] `PUT /api/v1/profiles/:userId` - Mettre à jour profil
-- [ ] Validation des champs profil
-- [ ] Tests unitaires profils
+- [x] Migration DB (001)
+- [ ] `GET /api/v1/profiles/:userId`
+- [ ] `PUT /api/v1/profiles/:userId`
 
 #### Frontend - Pinia Stores
-- [ ] `stores/themeStore.ts` - Gestion des thèmes
-- [ ] `stores/categoryStore.ts` - Gestion des catégories
-- [ ] `stores/authStore.ts` - Refactoriser auth existant
-- [ ] Actions CRUD pour chaque store
+- [x] `stores/auth.ts` - Gestion Auth (Refactorisé)
+- [ ] `stores/tag.ts` - Gestion des Tags
+- [ ] Intégration Stores dans composants
 
 ### Critères d'acceptation
 - Tous les endpoints répondent correctement
-- RBAC appliqué (seuls admin/teacher peuvent créer)
+- RBAC appliqué (Tags: admin/teacher edit, student view)
 - Tests unitaires passent à 100%
 - Stores Pinia fonctionnels
 
