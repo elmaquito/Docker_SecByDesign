@@ -1,6 +1,9 @@
 import dotenv from 'dotenv';
+import path from 'path';
 
-dotenv.config();
+// Load .env based on NODE_ENV
+const envFile = process.env.NODE_ENV === 'test' ? '.env.test' : '.env';
+dotenv.config({ path: path.resolve(process.cwd(), envFile) });
 
 export const PORT = process.env.PORT || 3000;
 export const NODE_ENV = process.env.NODE_ENV || 'development';
@@ -15,4 +18,5 @@ export const DB_CONFIG = {
   user: process.env.DB_USER || 'user',
   password: process.env.DB_PASSWORD || 'dev_secret_password',
   database: process.env.DB_NAME || 'notimatic_dev',
+  port: parseInt(process.env.DB_PORT || '5432'),
 };

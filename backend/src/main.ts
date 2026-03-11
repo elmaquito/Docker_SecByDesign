@@ -13,6 +13,7 @@ import metadataRoutes from './metadata/metadata.routes';
 import tagsRoutes from './tags/tags.routes';
 import { errorHandler, apiLimiter, sanitizeInput } from './common/middleware';
 
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 
@@ -30,13 +31,39 @@ app.use(apiLimiter);
 app.use(sanitizeInput);
 
 // --- Routes ---
+
+// Create API v1 Router
+const v1Router = express.Router();
+
+// Mount routes to API v1
+v1Router.use('/auth', authRoutes);
+v1Router.use('/users', userRoutes);
+v1Router.use('/notes', notesRoutes);
+v1Router.use('/', metadataRoutes); // Contains /themes and /categories
+v1Router.use('/tags', tagsRoutes);
+
+// Health Check (v1)
+v1Router.get('/health', async (req, res) => {
+  try {
+    const time = await pool.query('SELECT NOW()');
+    res.json({ status: 'OK', time: time.rows[0].now });
+  } catch (err) {
+    res.status(500).json({ status: 'DB Connection Error' });
+  }
+});
+
+// Mount v1 Router
+app.use('/api/v1', v1Router);
+
+// --- Backward Compatibility (ALIAS) ---
+// Mount the same routers at root level for legacy clients
 app.use('/auth', authRoutes);
 app.use('/users', userRoutes);
 app.use('/notes', notesRoutes);
-app.use('/', metadataRoutes); // Contains /themes and /categories
+app.use('/', metadataRoutes);
 app.use('/tags', tagsRoutes);
 
-// --- Health Check ---
+// Legacy Health Check
 app.get('/health', async (req, res) => {
   try {
     const time = await pool.query('SELECT NOW()');
@@ -50,9 +77,11 @@ app.get('/health', async (req, res) => {
 app.use(errorHandler);
 
 // --- Start Server ---
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT} in ${NODE_ENV} mode`);
-});
+if (process.env.NODE_ENV !== 'test') {
+  app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT} in ${NODE_ENV} mode`);
+  });
+}
 
 export default app;
 

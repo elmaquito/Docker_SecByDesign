@@ -25,6 +25,8 @@ services:
       - POSTGRES_USER=notimatic_user
       - POSTGRES_DB=notimatic_db
       - POSTGRES_PASSWORD=test_password
+    volumes:
+      - ../backend/init.sql:/docker-entrypoint-initdb.d/init.sql
     secrets: [] # Remove secrets requirement for local test
     ports:
-      - "5432:5432" # Optional, for debugging DB if needed
+      - "5433:5432" # Use 5433 to avoid conflict with dev env (5432)

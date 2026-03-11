@@ -1,5 +1,18 @@
 # NOTIMATIC API Documentation
 
+## Health Check
+
+### GET /api/v1/health
+Check system status.
+
+**Response:**
+```json
+{
+  "status": "OK",
+  "time": "2025-12-12T13:54:16.448Z"
+}
+```
+
 ## Authentication Endpoints
 
 ### POST /api/v1/auth/login

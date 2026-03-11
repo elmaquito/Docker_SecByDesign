@@ -6,7 +6,7 @@ $ErrorActionPreference = "Stop"
 $DB_CONTAINER = if ($env:DB_CONTAINER) { $env:DB_CONTAINER } else { "infrastructure-database-1" }
 $DB_USER = if ($env:DB_USER) { $env:DB_USER } else { "user" }
 $DB_NAME = if ($env:DB_NAME) { $env:DB_NAME } else { "notimatic_dev" }
-$MIGRATIONS_DIR = Join-Path $PSScriptRoot "../../backend/migrations"
+$MIGRATIONS_DIR = Join-Path $PSScriptRoot "migrations"
 $MIGRATIONS_TABLE = "schema_migrations"
 
 Write-Host "🔧 NOTIMATIC Database Migration Runner"
