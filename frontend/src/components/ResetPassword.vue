@@ -58,7 +58,7 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
-import { API_V1_BASE_URL } from '../config/api.js'
+import { API_V1_BASE_URL } from '../config/api'
 
 const emit = defineEmits(['success'])
 

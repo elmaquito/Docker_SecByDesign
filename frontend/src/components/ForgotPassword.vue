@@ -49,7 +49,7 @@
 
 <script setup>
 import { ref } from 'vue'
-import { API_V1_BASE_URL } from '../config/api.js'
+import { API_V1_BASE_URL } from '../config/api'
 
 const emit = defineEmits(['back'])
 

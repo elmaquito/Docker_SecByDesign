@@ -53,7 +53,7 @@
 
 <script setup>
 import { computed } from 'vue'
-import { getThemeColor } from '../utils/theme.js'
+import { getThemeColor } from '../utils/theme'
 import Reactions from './Reactions.vue'
 
 const props = defineProps({

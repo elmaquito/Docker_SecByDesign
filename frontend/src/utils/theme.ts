@@ -15,17 +15,14 @@ export const getThemeColor = (color: string): string => {
   return colors[color] || '#3498db'
 }
 
-export const initializeNoteState = (note: Note): Note & { _editing: boolean; _saving: boolean; _comments: any[] } => {
+export const initializeNoteState = (note: Note) => {
   return {
     ...note,
     _editing: false,
     _saving: false,
-    _comments: []
-  }
-}
+    _comments: [],
     _editedTitle: note.title,
     _editedContent: note.content,
-    _comments: [],
     _newComment: ''
   }
 }
