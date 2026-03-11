@@ -1,11 +1,17 @@
 module.exports = {
   preset: 'ts-jest',
   testEnvironment: 'node',
-  testMatch: ['<rootDir>/tests/**/*.test.js', '<rootDir>/tests/**/*.test.ts'],
+  moduleDirectories: ['node_modules', 'src'],
+  verbose: true,
+  roots: [
+    '<rootDir>/src',
+    '<rootDir>/tests'
+  ],
+  transform: {
+    '^.+\\.(ts|tsx)$': 'ts-jest',
+  },
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
   },
-  moduleDirectories: ['node_modules', 'src'],
-  verbose: true,
-  rootDir: '.', // Explicit relative root
+  testPathIgnorePatterns: [],
 };

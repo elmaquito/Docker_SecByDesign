@@ -1,9 +1,10 @@
-import dotenv from 'dotenv';
+﻿import dotenv from 'dotenv';
 import path from 'path';
 
 // Load .env based on NODE_ENV
 const envFile = process.env.NODE_ENV === 'test' ? '.env.test' : '.env';
-dotenv.config({ path: path.resolve(process.cwd(), envFile) });
+const envPath = path.resolve(process.cwd(), envFile);
+dotenv.config({ path: envPath });
 
 export const PORT = process.env.PORT || 3000;
 export const NODE_ENV = process.env.NODE_ENV || 'development';
@@ -15,8 +16,8 @@ export const CORS_ORIGINS = process.env.CORS_ORIGINS
 
 export const DB_CONFIG = {
   host: process.env.DB_HOST || 'database',
+  port: parseInt(process.env.DB_PORT || '5432', 10),
   user: process.env.DB_USER || 'user',
   password: process.env.DB_PASSWORD || 'dev_secret_password',
   database: process.env.DB_NAME || 'notimatic_dev',
-  port: parseInt(process.env.DB_PORT || '5432'),
 };

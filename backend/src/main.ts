@@ -1,18 +1,22 @@
 import express from 'express';
-import authRoutes from './routes/auth';
-import userRoutes from './routes/users';
-import noteRoutes from './routes/notes';
-import tagRoutes from './routes/tags';
-import metadataRoutes from './routes/metadata';
-
+import helmet from 'helmet';
+import cors from 'cors';
+import cookieParser from 'cookie-parser';
+import { PORT, NODE_ENV, CORS_ORIGINS } from './config/env';
+import { pool } from './config/database';
+import { apiLimiter, sanitizeInput } from './common/middleware';
+import authRoutes from './auth/auth.routes';
+import userRoutes from './users/user.routes';
+import noteRoutes from './notes/notes.routes';
+import tagRoutes from './tags/tags.routes';
+import metadataRoutes from './metadata/metadata.routes';
 
 const app = express();
 
-<<<<<<< HEAD
 // --- Middleware ---
 app.use(helmet());
 app.use(cors({
-  origin: process.env.CORS_ORIGINS ? process.env.CORS_ORIGINS.split(',').map(o => o.trim()) : ['http://localhost:5173', 'http://127.0.0.1:5173'],
+  origin: CORS_ORIGINS,
   credentials: true
 }));
 app.use(express.json());
@@ -20,7 +24,7 @@ app.use(cookieParser());
 
 // Security Middleware (0.5.0)
 app.use(apiLimiter);
-app.use(sanitizeInput);
+app.use((req, res, next) => sanitizeInput(req, res, next));
 
 // --- Routes ---
 
@@ -30,15 +34,15 @@ const v1Router = express.Router();
 // Mount routes to API v1
 v1Router.use('/auth', authRoutes);
 v1Router.use('/users', userRoutes);
-v1Router.use('/notes', notesRoutes);
+v1Router.use('/notes', noteRoutes);
 v1Router.use('/', metadataRoutes); // Contains /themes and /categories
-v1Router.use('/tags', tagsRoutes);
+v1Router.use('/tags', tagRoutes);
 
 // Health Check (v1)
 v1Router.get('/health', async (req, res) => {
   try {
     const time = await pool.query('SELECT NOW()');
-    res.json({ status: 'OK', time: time.rows[0].now });
+    res.json({ status: 'OK', time: time.rows[0].now, version: 'v1' });
   } catch (err) {
     res.status(500).json({ status: 'DB Connection Error' });
   }
@@ -51,22 +55,25 @@ app.use('/api/v1', v1Router);
 // Mount the same routers at root level for legacy clients
 app.use('/auth', authRoutes);
 app.use('/users', userRoutes);
-app.use('/notes', notesRoutes);
+app.use('/notes', noteRoutes);
 app.use('/', metadataRoutes);
-app.use('/tags', tagsRoutes);
+app.use('/tags', tagRoutes);
 
 // Legacy Health Check
 app.get('/health', async (req, res) => {
   try {
     const time = await pool.query('SELECT NOW()');
-    res.json({ status: 'OK', time: time.rows[0].now });
+    res.json({ status: 'OK', time: time.rows[0].now, legacy: true });
   } catch (err) {
     res.status(500).json({ status: 'DB Connection Error' });
   }
 });
 
 // --- Error Handler ---
-app.use(errorHandler);
+app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+  console.error(err.stack);
+  res.status(500).json({ error: 'Internal Server Error' });
+});
 
 // --- Start Server ---
 if (process.env.NODE_ENV !== 'test') {
@@ -74,23 +81,5 @@ if (process.env.NODE_ENV !== 'test') {
     console.log(`Server running on port ${PORT} in ${NODE_ENV} mode`);
   });
 }
-
-export default app;
-=======
-// Health check route
-app.use('/api/v1/health', (req, res) => {
-    res.status(200).send('OK');
-});
-app.use('/health', (req, res) => {
-    res.redirect(301, '/api/v1/health');
-});
-
-// Mounting all routers under /api/v1
-app.use('/api/v1/auth', authRoutes);
-app.use('/api/v1/users', userRoutes);
-app.use('/api/v1/notes', noteRoutes);
-app.use('/api/v1/tags', tagRoutes);
-app.use('/api/v1', metadataRoutes);
->>>>>>> 09a58d31bf9cec552e7aa54865e03715276fdcff
 
 export default app;
