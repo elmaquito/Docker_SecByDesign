@@ -10,6 +10,7 @@ import userRoutes from './users/user.routes';
 import noteRoutes from './notes/notes.routes';
 import tagRoutes from './tags/tags.routes';
 import metadataRoutes from './metadata/metadata.routes';
+import feedRoutes from './feed/feed.routes';
 
 const app = express();
 
@@ -37,6 +38,7 @@ v1Router.use('/users', userRoutes);
 v1Router.use('/notes', noteRoutes);
 v1Router.use('/', metadataRoutes); // Contains /themes and /categories
 v1Router.use('/tags', tagRoutes);
+v1Router.use('/feed', feedRoutes);
 
 // Health Check (v1)
 v1Router.get('/health', async (req, res) => {

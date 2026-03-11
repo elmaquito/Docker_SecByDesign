@@ -141,26 +141,13 @@
       <AccountSettings :user="user" @close="activeView = 'feed'" @updated="activeView = 'feed'" />
     </div>
 
-    <!-- Create Note Modal -->
-    <div v-if="showCreateModal" class="modal-overlay" @click="showCreateModal = false">
-      <div class="modal-content" @click.stop>
-        <div class="modal-header">
-          <h3>📝 Créer une Nouvelle Note</h3>
-          <button @click="showCreateModal = false" class="modal-close">×</button>
-        </div>
-        <form @submit.prevent="createNote" class="note-form">
-          <input v-model="newNote.title" placeholder="Titre de la note" required class="form-input" />
-          <textarea v-model="newNote.content" placeholder="Contenu de la note (chiffré en transit)" required class="form-textarea"></textarea>
-          <div class="modal-actions">
-            <button type="button" @click="showCreateModal = false" class="btn-cancel">Annuler</button>
-            <button type="submit" :disabled="isSaving" class="btn-submit">
-              {{ isSaving ? 'Enregistrement...' : 'Enregistrer' }}
-            </button>
-          </div>
-          <div v-if="saveError" class="error-message">{{ saveError }}</div>
-        </form>
-      </div>
-    </div>
+    <!-- Create Note Modal Component -->
+    <CreateNoteModal 
+      :show="showCreateModal" 
+      :user="user" 
+      @close="showCreateModal = false" 
+      @created="handleNoteCreated" 
+    />
   </div>
 </template>
 
@@ -169,6 +156,7 @@ import { ref, reactive, onMounted, computed, defineProps } from 'vue'
 import { storeToRefs } from 'pinia'
 import Feed from './Feed.vue'
 import AccountSettings from './AccountSettings.vue'
+import CreateNoteModal from './CreateNoteModal.vue'
 import { useNoteStore } from '../stores/note'
 import { useUserStore } from '../stores/user'
 import { useAuthStore } from '../stores/auth'
@@ -177,16 +165,31 @@ import type { Note } from '../types/models'
 const props = defineProps(['user'])
 const activeView = ref('feed')
 const showCreateModal = ref(false)
-const newNote = reactive({ title: '', content: '' })
+// newNote, isSaving, saveError removed as they are now handled in CreateNoteModal
+
 const newUser = reactive({ username: '', password: '', role: 'student' })
-const isSaving = ref(false)
-const saveError = ref('')
 
 // Utilize Stores
 const noteStore = useNoteStore()
 const userStore = useUserStore()
 const { notes } = storeToRefs(noteStore)
 const { users } = storeToRefs(userStore)
+
+// ... existing code ...
+
+const handleNoteCreated = () => {
+  showCreateModal.value = false
+  // Optionally switch to my-notes or feed
+  // activeView.value = 'my-notes' 
+  // Refresh feed if active
+  if (activeView.value === 'feed') {
+     // useFeedStore? We don't have access here unless we import it
+     // But CreateNote updates noteStore? 
+     // Feed uses useFeedStore which is separate from useNoteStore (legacy)
+     // If user created a note, we might want to refresh feed.
+  }
+}
+
 
 // We filter notes for "my notes" based on the logged in user
 const myNotes = computed(() => {
@@ -248,21 +251,7 @@ const fetchNotes = async () => {
   }
 }
 
-const createNote = async () => {
-  isSaving.value = true
-  saveError.value = ''
-  try {
-    await noteStore.createNote(newNote)
-    newNote.title = ''
-    newNote.content = ''
-    showCreateModal.value = false
-    activeView.value = 'my-notes'
-  } catch (e: any) {
-    saveError.value = e.message || 'Error creating note'
-  } finally {
-    isSaving.value = false
-  }
-}
+// createNote function removed, logic moved to CreateNoteModal
 
 const deleteNote = async (id: number) => {
   if (!confirm('Are you sure you want to delete this note?')) return

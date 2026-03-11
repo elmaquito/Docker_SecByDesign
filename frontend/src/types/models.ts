@@ -27,14 +27,27 @@ export interface UserProfile {
 // Note model
 export interface Note {
   id: number;
+  user_id: number;
   title: string;
   content: string;
-  author_id: number;
   created_at: string;
-  updated_at: string;
-  tags?: Tag[];
-  reactions?: Reaction[];
+  updated_at?: string;
   
+  tags?: Tag[];
+  targets?: Target[];
+  
+  // Metadata from backend join
+  owner_role?: UserRole;
+  owner_username?: string;
+  view_count?: number;
+  reactions_up?: number;
+  reactions_down?: number;
+  comment_count?: number;
+  pinned?: boolean;
+  urgent?: boolean;
+  theme?: any;
+  category?: any;
+
   // UI states
   _editing?: boolean;
   _saving?: boolean;
@@ -42,6 +55,11 @@ export interface Note {
   _editedContent?: string;
   _comments?: any[];
   _newComment?: string;
+}
+
+export interface Target {
+  type: 'user' | 'classe' | 'promotion' | 'niveau' | 'all';
+  value?: string | null;
 }
 
 // Tag model (Unified Tags)

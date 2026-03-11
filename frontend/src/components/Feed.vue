@@ -3,7 +3,7 @@
     <div class="feed-header">
       <div class="search-bar">
         <input 
-          v-model="searchQuery" 
+          v-model="feedStore.filters.search" 
           type="text" 
           placeholder="🔍 Rechercher..."
           class="search-input"
@@ -20,7 +20,7 @@
         <h4>🎓 Classes</h4>
         <div class="filter-options">
           <label v-for="tag in tagStore.classes" :key="tag.id" class="filter-checkbox">
-            <input type="checkbox" :value="tag.id" v-model="selectedTags" />
+            <input type="checkbox" :value="tag.name" v-model="feedStore.filters.tags" />
             <span>{{ tag.name }}</span>
           </label>
         </div>
@@ -31,7 +31,7 @@
         <h4>📚 Spécialités</h4>
         <div class="filter-options">
           <label v-for="tag in tagStore.specialites" :key="tag.id" class="filter-checkbox">
-            <input type="checkbox" :value="tag.id" v-model="selectedTags" />
+            <input type="checkbox" :value="tag.name" v-model="feedStore.filters.tags" />
             <span :style="{ color: tag.meta?.color }">{{ tag.name }}</span>
           </label>
         </div>
@@ -42,7 +42,7 @@
         <h4>👥 Groupes</h4>
         <div class="filter-options">
           <label v-for="tag in tagStore.groupes" :key="tag.id" class="filter-checkbox">
-            <input type="checkbox" :value="tag.id" v-model="selectedTags" />
+            <input type="checkbox" :value="tag.name" v-model="feedStore.filters.tags" />
             <span>{{ tag.name }}</span>
           </label>
         </div>
@@ -53,7 +53,7 @@
         <h4>📂 Catégories</h4>
         <div class="filter-options">
           <label v-for="tag in tagStore.categories" :key="tag.id" class="filter-checkbox">
-            <input type="checkbox" :value="tag.id" v-model="selectedTags" />
+            <input type="checkbox" :value="tag.name" v-model="feedStore.filters.tags" />
             <span>{{ tag.name }}</span>
           </label>
         </div>
@@ -66,80 +66,80 @@
     </div>
 
     <div class="feed-content">
-      <div v-if="noteStore.loading" class="loading">Chargement...</div>
-      <div v-else-if="filteredNotes.length === 0" class="empty-state">
+      <div v-if="loading && notes.length === 0" class="loading">Chargement...</div>
+      <div v-else-if="notes.length === 0" class="empty-state">
         <p>📝 Aucune note à afficher</p>
       </div>
       <div v-else class="notes-grid">
         <NoteCard 
-          v-for="note in filteredNotes" 
+          v-for="note in notes" 
           :key="note.id" 
           :note="note"
           @comment="handleComment"
           @view="handleView"
         />
       </div>
+
+      <div v-if="hasMore && !loading && notes.length > 0" class="pagination-controls">
+         <button class="btn-load-more" @click="loadMore">Charger plus de notes</button>
+      </div>
+      <div v-if="loading && notes.length > 0" class="loading-more">Chargement plus...</div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, watch, onMounted } from 'vue'
 import { storeToRefs } from 'pinia'
 import NoteCard from './NoteCard.vue'
-import { useNoteStore } from '../stores/note'
+import { useFeedStore } from '../stores/feed'
 import { useTagStore } from '../stores/tag'
 
 const props = defineProps(['user'])
 const emit = defineEmits(['view-note'])
 
-const noteStore = useNoteStore()
+const feedStore = useFeedStore()
 const tagStore = useTagStore()
-const { notes } = storeToRefs(noteStore)
+const { notes, loading, hasMore } = storeToRefs(feedStore)
 
-const searchQuery = ref('')
 const showFilters = ref(false)
-const selectedTags = ref<number[]>([])
 
-const fetchNotes = async () => {
-  await noteStore.fetchNotes()
-}
-
-const filteredNotes = computed(() => {
-  let result = notes.value
-  
-  if (searchQuery.value) {
-    const query = searchQuery.value.toLowerCase()
-    result = result.filter(n => 
-      n.title.toLowerCase().includes(query) || 
-      (n.content && n.content.toLowerCase().includes(query))
-    )
-  }
-  
-  if (selectedTags.value.length > 0) {
-    result = result.filter(n => {
-      if (!n.tags) return false
-      return n.tags.some(t => selectedTags.value.includes(t.id))
-    })
-  }
-  
-  return result
+// Watch search (debounced)
+let searchTimeout: ReturnType<typeof setTimeout>
+watch(() => feedStore.filters.search, (newVal) => {
+  clearTimeout(searchTimeout)
+  searchTimeout = setTimeout(() => {
+    feedStore.fetchFeed(true)
+  }, 500)
 })
 
+// Watch tags (immediate)
+watch(() => feedStore.filters.tags, () => {
+    feedStore.fetchFeed(true)
+}, { deep: true })
+
 const resetFilters = () => {
-  selectedTags.value = []
+  feedStore.filters.search = ''
+  feedStore.filters.tags = []
 }
 
-const handleComment = (noteId: number) => {
-  emit('view-note', noteId)
+const loadMore = () => {
+  feedStore.page++
+  feedStore.fetchFeed(false)
 }
 
-const handleView = (noteId: number) => {
-  emit('view-note', noteId)
+const handleComment = (id: number) => {
+  emit('view-note', id)
+}
+
+const handleView = (id: number) => {
+  emit('view-note', id)
 }
 
 onMounted(() => {
-  fetchNotes()
+  if (notes.value.length === 0) {
+    feedStore.fetchFeed(true)
+  }
   tagStore.fetchTags()
 })
 </script>
@@ -148,6 +148,156 @@ onMounted(() => {
 .feed-container {
   max-width: 900px;
   margin: 0 auto;
+  padding: 1rem;
+}
+
+.feed-header {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1rem;
+  align-items: center;
+}
+
+.search-bar {
+  flex: 1;
+}
+
+.search-input {
+  width: 100%;
+  padding: 0.8rem 1rem;
+  border-radius: 20px;
+  border: 1px solid #ddd;
+  font-size: 1rem;
+}
+
+.filter-btn {
+  padding: 0.8rem 1.2rem;
+  border-radius: 20px;
+  border: 1px solid #ddd;
+  background: white;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.filter-btn:hover {
+  background: #f5f5f5;
+}
+
+.filters-panel {
+  background: white;
+  padding: 1.5rem;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  margin-bottom: 2rem;
+}
+
+.filter-section {
+  margin-bottom: 1.5rem;
+}
+
+.filter-section h4 {
+  margin-bottom: 0.8rem;
+  color: #666;
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.filter-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.8rem;
+}
+
+.filter-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  padding: 0.4rem 0.8rem;
+  background: #f8f9fa;
+  border-radius: 15px;
+  transition: all 0.2s;
+}
+
+.filter-checkbox:hover {
+  background: #e9ecef;
+}
+
+.filter-checkbox input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+}
+
+.filter-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 1rem;
+  margin-top: 1rem;
+  border-top: 1px solid #eee;
+  padding-top: 1rem;
+}
+
+.btn-apply, .btn-reset {
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  cursor: pointer;
+  border: none;
+}
+
+.btn-apply {
+  background: #007bff;
+  color: white;
+}
+
+.btn-reset {
+  background: #6c757d;
+  color: white;
+}
+
+.notes-grid {
+  display: grid;
+  gap: 1.5rem;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 3rem;
+  color: #666;
+  background: white;
+  border-radius: 12px;
+}
+
+.loading, .loading-more {
+  text-align: center;
+  padding: 2rem;
+  color: #666;
+  font-weight: 500;
+}
+
+.btn-load-more {
+    display: block;
+    width: 100%;
+    padding: 1rem;
+    margin-top: 1.5rem;
+    background: white;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 500;
+    color: #007bff;
+    transition: background 0.2s;
+}
+
+.btn-load-more:hover {
+    background: #f8f9fa;
+}
+
+.pagination-controls {
+    text-align: center;
+}
+</style>
 }
 
 .feed-header {

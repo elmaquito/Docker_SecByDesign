@@ -108,7 +108,7 @@ export const listNotes = async (req: any, res: Response) => {
 
 export const createNote = async (req: any, res: Response) => {
   try {
-    const { title, content, theme_id, category_id } = NoteCreateSchema.parse(req.body);
+    const { title, content, theme_id, category_id, tags, targets } = NoteCreateSchema.parse(req.body);
     const userId = req.user.id;
 
     const client = await pool.connect();
@@ -128,6 +128,21 @@ export const createNote = async (req: any, res: Response) => {
       if (category_id) {
         await client.query('INSERT INTO note_categories (note_id, category_id) VALUES ($1, $2)', [note.id, category_id]);
       }
+      
+      if (tags && tags.length > 0) {
+        for (const tagId of tags) {
+          await client.query('INSERT INTO note_tags (note_id, tag_id) VALUES ($1, $2)', [note.id, tagId]);
+        }
+      }
+
+      if (targets && targets.length > 0) {
+        for (const target of targets) {
+          await client.query(
+            'INSERT INTO note_targets (note_id, target_type, target_value) VALUES ($1, $2, $3)', 
+             [note.id, target.type, target.value || null]
+          );
+        }
+      }
 
       await client.query('COMMIT');
 
@@ -137,12 +152,12 @@ export const createNote = async (req: any, res: Response) => {
         action: 'NOTE_CREATED',
         entityType: 'note',
         entityId: note.id,
-        details: { title },
+        details: { title, tags, targets },
         ipAddress: req.ip,
         userAgent: req.get('User-Agent')
       });
 
-      res.status(201).json({ ...note, theme_id, category_id });
+      res.status(201).json({ ...note, theme_id, category_id, tags, targets });
     } catch (e) {
       await client.query('ROLLBACK');
       throw e;
