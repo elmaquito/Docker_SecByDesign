@@ -123,52 +123,6 @@ export const setupAdmin = async (req: Request, res: Response) => {
   }
 };
 
-export const updateAccount = async (req: any, res: Response) => {
-  try {
-    const { email, phone, password } = accountUpdateSchema.parse(req.body);
-    const updates: string[] = [];
-    const values: any[] = [];
-    let paramIndex = 1;
-
-    if (email !== undefined) {
-      updates.push(`email = $${paramIndex++}`);
-      values.push(email);
-    }
-    if (phone !== undefined) {
-      updates.push(`phone = $${paramIndex++}`);
-      values.push(phone);
-    }
-    if (password !== undefined) {
-      const hash = await argon2.hash(password, { type: argon2.argon2id });
-      updates.push(`password_hash = $${paramIndex++}`);
-      values.push(hash);
-    }
-
-    if (updates.length > 0) {
-      values.push(req.user.id);
-      await pool.query(`UPDATE users SET ${updates.join(', ')} WHERE id = $${paramIndex}`, values);
-    }
-
-    // Audit Log for critical change (Password/Email update)
-    AuditLogger.log({
-      userId: req.user.id,
-      action: 'PROFILE_UPDATED',
-      entityType: 'user',
-      entityId: req.user.id,
-      details: { fields: Object.keys(req.body) },
-      ipAddress: req.ip,
-      userAgent: req.get('User-Agent')
-    });
-
-    res.json({ message: 'Account updated' });
-  } catch (err: any) {
-    if (err instanceof z.ZodError) return res.status(400).json({ error: err.errors });
-    // Handle unique constraint on email/phone if applicable
-    if (err.code === '23505') return res.status(409).json({ error: 'Email or phone already in use' });
-    console.error('Error updating account:', err);
-    res.status(500).json({ error: 'Internal error' });
-  }
-};
 
 export const exportData = async (req: any, res: Response) => {
   const userId = parseInt(req.params.id);

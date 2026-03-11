@@ -78,19 +78,36 @@
 
 ---
 
-## 🏷️ Système de Tags (À venir)
+## 🏷️ Système de Thèmes et Catégories
 
-Les tags permettront de classifier et filtrer les notes selon:
-- **Classe:** Cyber1, Cyber2, Dev1, Dev2, Tous
-- **Spécialité:** Cybersécurité, Développement, Réseau, Cloud
-- **Groupe:** Groupe A, B, C
-- **Catégorie:** Urgent, Important, Info, Examen, Projet, Cours
+Les notes sont désormais classées pour faciliter l'accès à l'information pertinente :
 
-### Fonctionnalités prévues:
-- Assigner plusieurs tags à une note
-- Filtrer les notes par tags
-- Tags par défaut pour la vue étudiant
-- Gestion des tags pour les admins/enseignants
+### Thèmes (Couleurs)
+Les thèmes sont représentés par des badges colorés (ex: 🔴 Urgent, 🔵 Info, 🟢 Projet).
+- Permet d'identifier visuellement l'importance ou le type de contenu.
+- Les administrateurs peuvent créer de nouveaux thèmes via l'API (interface graphique en cours de développement).
+
+### Catégories (Dossiers)
+Les catégories permettent de structurer le contenu de manière hiérarchique.
+- Exemples : Cours > Cyber > Réseau.
+- Vous pouvez filtrer votre fil d'actualité par catégorie spécifique.
+
+### Filtrage du Feed
+1. Cliquez sur le bouton "Filtres" en haut du tableau de bord.
+2. Cochez les Thèmes et Catégories qui vous intéressent.
+3. Validez pour voir uniquement les notes correspondantes.
+
+---
+
+## 🎨 Personnalisation (Nouveau v1.0.0)
+
+### Mode Sombre
+L'interface s'adapte à vos préférences visuelles.
+- Cliquez sur l'icône 🌙 / ☀️ dans l'en-tête pour basculer entre les modes.
+- Cette préférence est sauvegardée sur votre appareil.
+
+### Feed d'Actualités Responsive
+L'affichage s'adapte automatiquement aux écrans mobiles et tablettes pour une lecture confortable en déplacement.
 
 ---
 
