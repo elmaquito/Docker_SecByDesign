@@ -1,11 +1,11 @@
 import { NextFunction, Response } from 'express';
-import { Pool } from 'pg';
+// import { Pool } from 'pg';
 import rateLimit from 'express-rate-limit';
 import validator from 'validator';
 import { NODE_ENV } from '../config/env';
 import { pool } from '../config/database';
 import { TokenService } from '../auth/token.service';
-import { Role } from './types';
+// import { Role } from './types';
 
 const tokenService = new TokenService();
 
@@ -149,7 +149,7 @@ export const sanitizeInput = (req: any, res: Response, next: NextFunction) => {
 };
 
 // 4. Global Error Handler
-export const errorHandler = (err: any, req: any, res: Response, next: NextFunction) => {
+export const errorHandler = (err: any, req: any, res: Response, _next: NextFunction) => {
   console.error('[Error] Uncaught Exception:', err);
   
   // Handle Zod errors (if any leak here, usually they are caught in controller)

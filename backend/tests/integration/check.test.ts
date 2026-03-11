@@ -22,7 +22,7 @@ const mockAuthenticate = (req: any, res: Response, next: NextFunction) => {
   next();
 };
 
-const mockAuthorize = (roles: string[]) => (req: Request, res: Response, next: NextFunction) => {
+const mockAuthorize = (_roles: string[]) => (req: Request, res: Response, next: NextFunction) => {
   next(); // Always authorize in this test suite
 };
 

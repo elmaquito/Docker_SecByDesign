@@ -1,4 +1,4 @@
-import { Request, Response } from 'express';
+import { Response } from 'express';
 import { z } from 'zod';
 import { pool } from '../config/database';
 import { AuditLogger } from '../common/audit';

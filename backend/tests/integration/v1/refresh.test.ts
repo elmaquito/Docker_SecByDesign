@@ -4,7 +4,7 @@ import { clearUsers, seedUsers } from '../setup';
 import { pool } from '../../../src/config/database';
 
 describe('Token Lifecycle Integration Tests', () => {
-    let studentCookie: string[];
+    // let studentCookie: string[]; // Unused
     let oldRefreshToken: string;
     let newRefreshToken: string;
 
@@ -28,7 +28,6 @@ describe('Token Lifecycle Integration Tests', () => {
         const cookies = res.headers['set-cookie'] as unknown as string[];
         expect(cookies).toBeDefined();
 
-        studentCookie = cookies;
         const refreshCookie = cookies.find(c => c.startsWith('refresh_token='));
         expect(refreshCookie).toBeDefined();
         oldRefreshToken = refreshCookie!.split(';')[0];

@@ -44,7 +44,7 @@ export class TokenService {
   verifyAccessToken(token: string): TokenPayload | null {
     try {
       return jwt.verify(token, this.jwtSecret) as TokenPayload;
-    } catch (err) {
+    } catch (_err) {
       return null;
     }
   }

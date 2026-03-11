@@ -1,6 +1,7 @@
 import request from 'supertest';
 import app from '../../../src/main';
 import { pool } from '../../../src/config/database';
+import * as argon2 from 'argon2';
 
 describe('Auth API (v1) Integration Tests', () => {
 
@@ -10,7 +11,6 @@ describe('Auth API (v1) Integration Tests', () => {
     await pool.query('DELETE FROM users');
     
     // Seed users (using direct SQL to bypass middleware for setup)
-    const argon2 = require('argon2');
     const hashedPassword = await argon2.hash('password123'); // Consistency
     
     await pool.query(

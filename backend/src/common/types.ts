@@ -8,6 +8,7 @@ export interface User {
   phone?: string;
 }
 
+/* eslint-disable @typescript-eslint/no-namespace */
 declare global {
   namespace Express {
     interface Request {

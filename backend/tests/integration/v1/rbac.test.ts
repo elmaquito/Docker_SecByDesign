@@ -8,7 +8,6 @@ describe('RBAC Integration Tests', () => {
     let teacherCookie: string[];
     let studentCookie: string[];
 
-    let adminUser: any;
     let teacherUser: any;
     let studentUser: any;
 
@@ -18,7 +17,6 @@ describe('RBAC Integration Tests', () => {
         // Fetch user IDs
         const usersRes = await pool.query('SELECT * FROM users');
         usersRes.rows.forEach(u => {
-            if (u.role === 'admin') adminUser = u;
             if (u.role === 'teacher') teacherUser = u;
             if (u.role === 'student') studentUser = u;
         });

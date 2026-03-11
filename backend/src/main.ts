@@ -43,7 +43,7 @@ v1Router.get('/health', async (req, res) => {
   try {
     const time = await pool.query('SELECT NOW()');
     res.json({ status: 'OK', time: time.rows[0].now, version: 'v1' });
-  } catch (err) {
+  } catch (_err) {
     res.status(500).json({ status: 'DB Connection Error' });
   }
 });
@@ -64,13 +64,13 @@ app.get('/health', async (req, res) => {
   try {
     const time = await pool.query('SELECT NOW()');
     res.json({ status: 'OK', time: time.rows[0].now, legacy: true });
-  } catch (err) {
+  } catch (_err) {
     res.status(500).json({ status: 'DB Connection Error' });
   }
 });
 
 // --- Error Handler ---
-app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
   console.error(err.stack);
   res.status(500).json({ error: 'Internal Server Error' });
 });
