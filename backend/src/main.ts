@@ -1,22 +1,14 @@
-import express, { Request, Response, NextFunction } from 'express';
-import helmet from 'helmet';
-import cors from 'cors';
-import cookieParser from 'cookie-parser';
-import { pool } from './config/database';
-import { NODE_ENV } from './config/env';
-
-// Routes
-import authRoutes from './auth/auth.routes';
-import userRoutes from './users/user.routes';
-import notesRoutes from './notes/notes.routes';
-import metadataRoutes from './metadata/metadata.routes';
-import tagsRoutes from './tags/tags.routes';
-import { errorHandler, apiLimiter, sanitizeInput } from './common/middleware';
+import express from 'express';
+import authRoutes from './routes/auth';
+import userRoutes from './routes/users';
+import noteRoutes from './routes/notes';
+import tagRoutes from './routes/tags';
+import metadataRoutes from './routes/metadata';
 
 
 const app = express();
-const PORT = process.env.PORT || 3000;
 
+<<<<<<< HEAD
 // --- Middleware ---
 app.use(helmet());
 app.use(cors({
@@ -84,4 +76,21 @@ if (process.env.NODE_ENV !== 'test') {
 }
 
 export default app;
+=======
+// Health check route
+app.use('/api/v1/health', (req, res) => {
+    res.status(200).send('OK');
+});
+app.use('/health', (req, res) => {
+    res.redirect(301, '/api/v1/health');
+});
 
+// Mounting all routers under /api/v1
+app.use('/api/v1/auth', authRoutes);
+app.use('/api/v1/users', userRoutes);
+app.use('/api/v1/notes', noteRoutes);
+app.use('/api/v1/tags', tagRoutes);
+app.use('/api/v1', metadataRoutes);
+>>>>>>> 09a58d31bf9cec552e7aa54865e03715276fdcff
+
+export default app;
