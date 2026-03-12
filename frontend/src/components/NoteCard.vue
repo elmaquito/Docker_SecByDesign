@@ -16,11 +16,18 @@
       <p>{{ getExcerpt }}</p>
     </div>
 
+    <div v-if="note.targets && note.targets.length > 0 && !isPublic(note)" class="note-targets">
+      <span class="target-label">🎯 Cible:</span>
+      <span v-for="(target, idx) in note.targets" :key="idx" class="target-badge">
+        {{ formatTarget(target) }}
+      </span>
+    </div>
+
     <div v-if="(note.tags && note.tags.length > 0) || (note.themes && note.themes.length > 0)" class="note-tags">
       <span class="tag-label">🏷️</span>
-      <span 
-        v-for="tag in displayTags" 
-        :key="tag.id || tag.name" 
+      <span
+        v-for="tag in displayTags"
+        :key="tag.id || tag.name"
         class="theme-badge"
         :style="{ backgroundColor: getTagColor(tag) }"
       >
@@ -122,10 +129,52 @@ const formatDate = (dateString) => {
   return date.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })
 }
 
+
+const isPublic = (note) => {
+  if (!note.targets) return true
+  return note.targets.some(t => t.type === 'all')
+}
+
+const formatTarget = (target) => {
+    if (!target) return ''
+    switch (target.type) {
+        case 'classe': return `Classe ${target.value}`
+        case 'promotion': return `Promo ${target.value}`
+        case 'niveau': return `Niveau ${target.value}`
+        case 'user': return 'Personnel'
+        case 'all': return 'Public'
+        default: return target.type
+    }
+}
+
 const getThemeColorLocal = getThemeColor
 </script>
 
 <style scoped>
+.note-targets {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.target-label {
+    font-weight: 600;
+    margin-right: 4px;
+}
+
+.target-badge {
+    background: rgba(0, 0, 0, 0.05);
+    color: var(--text-color);
+    padding: 2px 8px;
+    border-radius: 4px;
+    border: 1px solid rgba(0,0,0,0.1);
+    font-size: 0.8rem;
+}
+
 .note-card {
   background: var(--card-bg);
   border-radius: 12px;

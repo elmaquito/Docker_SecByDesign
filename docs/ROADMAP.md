@@ -110,14 +110,44 @@ Implémenter l'algorithme de feed intelligent qui filtre les notes en fonction d
 - [x] validation stricte des cibles dans `notes.controller.ts`
 
 #### Frontend - Feed Component
-- [ ] Mettre à jour `Feed.vue` pour utiliser `GET /api/v1/feed` avec pagination
-- [ ] Afficher les raisons de l'affichage (via `targets` ou tags correspondants)
-- [ ] Filtres côté client
+- [x] Mettre à jour `Feed.vue` pour utiliser `GET /api/v1/feed` avec pagination
+- [x] Afficher les raisons de l'affichage (via `targets` ou tags correspondants)
+- [x] Filtres côté client (par tags et recherche)
 
 ### Critères d'acceptation
-- Un étudiant ne voit que les notes qui lui sont destinées (sa classe, ses groupes, ou public)
-- Les notes "publiques" sont visibles par tous
-- Performance acceptable (< 200ms) pour la requête de feed
+- [x] Un étudiant ne voit que les notes qui lui sont destinées (Backend logic verified)
+- [x] Les notes "publiques" sont visibles par tous
+- [x] Performance acceptable (< 200ms) pour la requête de feed
+
+---
+
+## Version 0.5.0 - Sécurité Avancée & Audit
+
+**Statut**: 🔄 A venir
+
+### Objectifs
+Renforcer la sécurité avec 2FA, Audit Logs complets, et gestion des sessions.
+
+### Tâches
+
+#### Backend - Sécurité
+- [ ] Mettre à jour `auth.controller.ts` pour supporter 2FA (TOTP)
+- [ ] Implémenter le middleware de limitation de taux (Rate Limiting) global
+- [ ] Stockage sécurisé des secrets (Vault ou param store simulation)
+
+#### Backend - Audit
+- [ ] Compléter `audit.service.ts` pour couvrir toutes les actions sensibles
+- [ ] Endpoint `GET /api/v1/audit` pour les admins
+
+#### Frontend - Sécurité
+- [ ] Interface de configuration 2FA (QR Code)
+- [ ] Vue "Activités récentes" (Logs) pour l'utilisateur
+
+### Critères d'acceptation
+- 2FA fonctionnel et obligatoire pour les admins
+- Logs d'audit immuables pour toutes les actions critiques
+- Protection contre brute-force active
+
 
 
 ### Objectifs
