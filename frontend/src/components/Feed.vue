@@ -297,8 +297,6 @@ onMounted(() => {
 .pagination-controls {
     text-align: center;
 }
-</style>
-}
 
 .feed-header {
   display: flex;
