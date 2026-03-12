@@ -14,13 +14,8 @@ const FeedQuerySchema = z.object({
 export const getFeed = async (req: Request, res: Response) => {
   try {
     const { page, limit, tag, tags, search } = FeedQuerySchema.parse(req.query);
-    const userId = req.user?.id;
-    const userRole = req.user?.role;
-    
-    // Explicitly check for user existence since it's optional
-    if (!userId || !userRole) {
-      return res.status(401).json({ error: 'Unauthorized' });
-    }
+    const userId = req.user.id;
+    const userRole = req.user.role;
 
     const whereConditions: string[] = [];
     const queryParams: any[] = [];
@@ -31,9 +26,9 @@ export const getFeed = async (req: Request, res: Response) => {
       // Get student profile
       const profileRes = await pool.query('SELECT * FROM profiles WHERE user_id = $1', [userId]);
       const profile = profileRes.rows[0] || {};
-      
+
       const orConditions: string[] = ["nt.target_type = 'all'"];
-      
+
       if (profile.classe) {
         orConditions.push(`(nt.target_type = 'classe' AND nt.target_value = $${paramIndex++})`);
         queryParams.push(profile.classe);
@@ -46,17 +41,16 @@ export const getFeed = async (req: Request, res: Response) => {
         orConditions.push(`(nt.target_type = 'niveau' AND nt.target_value = $${paramIndex++})`);
         queryParams.push(profile.niveau);
       }
-      
+
       // Direct user target
       orConditions.push(`(nt.target_type = 'user' AND nt.target_value = $${paramIndex}::text)`);
       queryParams.push(userId.toString());
       paramIndex++;
 
       // User's own notes (even if not targeted)
-      // Logic: (EXISTS(...) OR n.user_id = $ID)
       const existsClause = `
         EXISTS (
-          SELECT 1 FROM note_targets nt 
+          SELECT 1 FROM note_targets nt
           WHERE nt.note_id = n.id AND (${orConditions.join(' OR ')})
         )
       `;

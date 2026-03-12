@@ -8,7 +8,7 @@
     "start": "node dist/main.js",
     "start:dev": "ts-node-dev --respawn --transpile-only src/main.ts",
     "migrate": "bash migrate.sh",
-    "lint": "eslint . --ext .ts",
+    "lint": "eslint .",
     "test": "jest --config jest.config.js",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage"
