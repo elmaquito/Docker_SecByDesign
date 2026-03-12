@@ -263,7 +263,7 @@ Renforcer la sécurité et implémenter la conformité GDPR.
 
 ## Version 0.6.0 - Tests & CI/CD (Actuel)
 
-**Statut**: ✅ Complété
+**Statut**: 🔄 En cours
 
 ### Objectifs
 Automatiser les tests et la CI/CD.
@@ -271,12 +271,12 @@ Automatiser les tests et la CI/CD.
 ### Tâches
 
 #### Tests Backend
-- [ ] Installer Jest ou Mocha + Chai + Supertest
-- [ ] Tests unitaires:
+- [x] Installer Jest ou Mocha + Chai + Supertest
+- [x] Tests unitaires:
   - Middleware auth/RBAC
   - Services (FeedService, ThemeService, etc.)
   - Validations Zod
-- [ ] Tests d'intégration:
+- [x] Tests d'intégration:
   - Endpoints feed
   - Endpoints themes/categories
   - Endpoints GDPR
@@ -284,12 +284,12 @@ Automatiser les tests et la CI/CD.
 - [ ] Coverage > 80%
 
 #### Tests Frontend
-- [ ] Installer Vitest
-- [ ] Tests unitaires Vitest:
+- [x] Installer Vitest
+- [x] Tests unitaires Vitest:
   - Stores Pinia (feedStore, noteStore, themeStore)
   - Composants (FeedList, NoteCard, CommentForm)
   - Utils/helpers
-- [ ] Mocks pour API calls
+- [x] Mocks pour API calls
 - [ ] Coverage > 70%
 
 #### Tests E2E
