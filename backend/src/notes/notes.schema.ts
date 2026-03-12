@@ -3,6 +3,8 @@ import { z } from 'zod';
 export const NoteCreateSchema = z.object({
   title: z.string().min(3).max(100),
   content: z.string().min(10), // Markdown
+  theme_id: z.number().int().positive().optional(),
+  category_id: z.number().int().positive().optional(),
   tags: z.array(z.number().int().positive()).optional(),
   targets: z.array(z.object({
     type: z.enum(['user', 'classe', 'promotion', 'niveau', 'all']),
@@ -13,6 +15,8 @@ export const NoteCreateSchema = z.object({
 export const NoteUpdateSchema = z.object({
   title: z.string().min(3).max(100).optional(),
   content: z.string().min(10).optional(),
+  theme_id: z.number().int().positive().optional(),
+  category_id: z.number().int().positive().optional(),
   tags: z.array(z.number().int().positive()).optional(),
   targets: z.array(z.object({
     type: z.enum(['user', 'classe', 'promotion', 'niveau', 'all']),

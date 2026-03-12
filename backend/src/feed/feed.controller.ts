@@ -1,5 +1,5 @@
 
-import { Response } from 'express';
+import { Request, Response } from 'express';
 import { pool } from '../config/database';
 import { z } from 'zod';
 
@@ -11,14 +11,19 @@ const FeedQuerySchema = z.object({
   search: z.string().optional(), // Text search
 });
 
-export const getFeed = async (req: any, res: Response) => {
+export const getFeed = async (req: Request, res: Response) => {
   try {
     const { page, limit, tag, tags, search } = FeedQuerySchema.parse(req.query);
-    const userId = req.user.id;
-    const userRole = req.user.role;
+    const userId = req.user?.id;
+    const userRole = req.user?.role;
+    
+    // Explicitly check for user existence since it's optional
+    if (!userId || !userRole) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
 
-    let whereConditions: string[] = [];
-    let queryParams: any[] = [];
+    const whereConditions: string[] = [];
+    const queryParams: any[] = [];
     let paramIndex = 1;
 
     // 1. Determine Access Conditions based on Role/Profile
@@ -27,17 +32,9 @@ export const getFeed = async (req: any, res: Response) => {
       const profileRes = await pool.query('SELECT * FROM profiles WHERE user_id = $1', [userId]);
       const profile = profileRes.rows[0] || {};
       
-      let orConditions: string[] = ["nt.target_type = 'all'"];
+      const orConditions: string[] = ["nt.target_type = 'all'"];
       
       if (profile.classe) {
-        // ... (existing code for targets) ...
-        // We need to be careful with paramIndex. 
-        // Re-implementing logic to ensure safety.
-        // Actually, let's keep the target logic but wrap it cleanly.
-      }
-    }
-    // ...
-
         orConditions.push(`(nt.target_type = 'classe' AND nt.target_value = $${paramIndex++})`);
         queryParams.push(profile.classe);
       }
@@ -51,7 +48,7 @@ export const getFeed = async (req: any, res: Response) => {
       }
       
       // Direct user target
-      orConditions.push(`(nt.target_type = 'user' AND nt.target_value = $${paramIndex}::text)`); // Cast to text for consistency
+      orConditions.push(`(nt.target_type = 'user' AND nt.target_value = $${paramIndex}::text)`);
       queryParams.push(userId.toString());
       paramIndex++;
 
