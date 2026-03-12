@@ -23,39 +23,67 @@ export const getFeed = async (req: Request, res: Response) => {
 
     // 1. Determine Access Conditions based on Role/Profile
     if (userRole === 'student') {
-      // Get student profile
-      const profileRes = await pool.query('SELECT * FROM profiles WHERE user_id = $1', [userId]);
-      const profile = profileRes.rows[0] || {};
+      // Get student profile AND tags
+      const userRes = await pool.query(`
+         SELECT p.classe, p.promotion, p.niveau,
+                (SELECT array_agg(ut.tag_id) FROM user_tags ut WHERE ut.user_id = $1) as tag_ids
+         FROM users u
+         LEFT JOIN profiles p ON u.id = p.user_id
+         WHERE u.id = $1
+      `, [userId]);
+      
+      const userData = userRes.rows[0] || {};
+      const { classe, promotion, niveau, tag_ids } = userData;
+      const validTagIds = tag_ids || [];
 
-      const orConditions: string[] = ["nt.target_type = 'all'"];
+      // Target Conditions (note_targets)
+      // Notes targeted to ALL, or user's class, promotion, niveau, or user directly
+      const targetConditions: string[] = ["nt.target_type = 'all'"];
 
-      if (profile.classe) {
-        orConditions.push(`(nt.target_type = 'classe' AND nt.target_value = $${paramIndex++})`);
-        queryParams.push(profile.classe);
+      if (classe) {
+        targetConditions.push(`(nt.target_type = 'classe' AND nt.target_value = $${paramIndex++})`);
+        queryParams.push(classe);
       }
-      if (profile.promotion) {
-        orConditions.push(`(nt.target_type = 'promotion' AND nt.target_value = $${paramIndex++})`);
-        queryParams.push(profile.promotion);
+      if (promotion) {
+        targetConditions.push(`(nt.target_type = 'promotion' AND nt.target_value = $${paramIndex++})`);
+        queryParams.push(promotion);
       }
-      if (profile.niveau) {
-        orConditions.push(`(nt.target_type = 'niveau' AND nt.target_value = $${paramIndex++})`);
-        queryParams.push(profile.niveau);
+      if (niveau) {
+        targetConditions.push(`(nt.target_type = 'niveau' AND nt.target_value = $${paramIndex++})`);
+        queryParams.push(niveau);
       }
 
       // Direct user target
-      orConditions.push(`(nt.target_type = 'user' AND nt.target_value = $${paramIndex}::text)`);
+      targetConditions.push(`(nt.target_type = 'user' AND nt.target_value = $${paramIndex++}::text)`);
       queryParams.push(userId.toString());
-      paramIndex++;
 
-      // User's own notes (even if not targeted)
-      const existsClause = `
+      // Clause: Is Targeted?
+      const isTargetedClause = `
         EXISTS (
           SELECT 1 FROM note_targets nt
-          WHERE nt.note_id = n.id AND (${orConditions.join(' OR ')})
+          WHERE nt.note_id = n.id AND (${targetConditions.join(' OR ')})
         )
       `;
-      whereConditions.push(`(${existsClause} OR n.user_id = $${paramIndex++})`);
+      
+      // Clause: Has Matching Tag? (Smart Feed for Groups/Specialties)
+      let isTaggedClause = "FALSE";
+      if (validTagIds.length > 0) {
+         isTaggedClause = `
+           EXISTS (
+             SELECT 1 FROM note_tags ntg
+             WHERE ntg.note_id = n.id AND ntg.tag_id = ANY($${paramIndex++}::int[])
+           )
+         `;
+         queryParams.push(validTagIds);
+      }
+      
+      // Clause: Is Owner?
+      const isOwnerClause = `n.user_id = $${paramIndex++}`;
       queryParams.push(userId);
+
+      // Combine Access Conditions
+      whereConditions.push(`(${isTargetedClause} OR ${isTaggedClause} OR ${isOwnerClause})`);
+      
     } else {
       // Admin/Teacher/Technician see all notes
       // No base filter needed
@@ -105,12 +133,20 @@ export const getFeed = async (req: Request, res: Response) => {
              COALESCE(
                (
                  SELECT json_agg(json_build_object('id', tg.id, 'name', tg.name, 'type', tg.type, 'meta', tg.meta))
-                 FROM note_tags nt_join 
-                 JOIN tags tg ON nt_join.tag_id = tg.id 
+                 FROM note_tags nt_join
+                 JOIN tags tg ON nt_join.tag_id = tg.id
                  WHERE nt_join.note_id = n.id
-               ), 
+               ),
                '[]'::json
-             ) as tags
+             ) as tags,
+             COALESCE(
+               (
+                 SELECT json_agg(json_build_object('type', nt.target_type, 'value', nt.target_value))
+                 FROM note_targets nt
+                 WHERE nt.note_id = n.id
+               ),
+               '[]'::json
+             ) as targets
       FROM notes n
       JOIN users u ON n.user_id = u.id
       ${whereClause}
@@ -135,9 +171,7 @@ export const getFeed = async (req: Request, res: Response) => {
     const notes = result.rows.map((r: any) => ({
       ...r,
       tags: r.tags || [],
-      reviews: [], 
-      reactions_up: r.reactions_up || 0,
-      reactions_down: r.reactions_down || 0
+      targets: r.targets || [],
     }));
 
     res.json({

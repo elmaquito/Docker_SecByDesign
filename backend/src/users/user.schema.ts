@@ -16,4 +16,5 @@ export const profileUpdateSchema = z.object({
   classe: z.string().max(50).optional(),
   promotion: z.string().max(50).optional(),
   niveau: z.string().max(20).optional(),
+  tags: z.array(z.number().int().positive()).optional()
 });

@@ -63,7 +63,7 @@ Ce document présente la roadmap complète pour le développement du MVP du syst
 
 ## Version 0.3.0 - API Unified Tags & Profils
 
-**Statut**: 🔄 En cours
+**Statut**: ✅ Complété
 
 ### Objectifs
 Finaliser l'implémentation de la logique métier pour les Tags Unifiés (remplaçant Thèmes/Catégories) et la gestion des profils.
@@ -74,30 +74,51 @@ Finaliser l'implémentation de la logique métier pour les Tags Unifiés (rempla
 - [x] Migration DB (006)
 - [x] Endpoints CRUD Tags (`tags.controller.ts`)
 - [x] Assignation Tags aux Notes (`note_tags`)
-- [ ] Tests unitaires approfondis pour Tags
+- [x] Tests unitaires approfondis pour Tags
 
 #### Backend - Profils
 - [x] Migration DB (001)
-- [ ] `GET /api/v1/profiles/:userId`
-- [ ] `PUT /api/v1/profiles/:userId`
+- [x] `GET /api/v1/profiles/:userId`
+- [x] `PUT /api/v1/profiles/:userId`
 
 #### Frontend - Pinia Stores
 - [x] `stores/auth.ts` - Gestion Auth (Refactorisé)
-- [ ] `stores/tag.ts` - Gestion des Tags
-- [ ] Intégration Stores dans composants
+- [x] `stores/tag.ts` - Gestion des Tags
+- [x] Intégration Stores dans composants
 
 ### Critères d'acceptation
-- Tous les endpoints répondent correctement
-- RBAC appliqué (Tags: admin/teacher edit, student view)
-- Tests unitaires passent à 100%
-- Stores Pinia fonctionnels
+- [x] Tous les endpoints répondent correctement
+- [x] RBAC appliqué (Tags: admin/teacher edit, student view)
+- [x] Tests unitaires passent à 100%
+- [x] Stores Pinia fonctionnels
 
 ---
 
 ## Version 0.4.0 - Feed Intelligent & Assignation
 
-**Dates estimées**: Semaine 3  
-**Effort estimé**: 7-10 jours
+**Statut**: 🔄 En cours
+
+### Objectifs
+Implémenter l'algorithme de feed intelligent qui filtre les notes en fonction des tags de l'utilisateur (classe, spécialités, groupes) et des assignations directes.
+
+### Tâches
+
+#### Backend - Feed Algorithm & Logic
+- [x] Migration `user_tags` (009) pour gérer les groupes/spécialités
+- [x] Mettre à jour `user.controller.ts` pour gérer les tags utilisateurs
+- [x] Implémenter l'algorithme de filtrage dans `feed.controller.ts` (Cibles + Tags + Owner)
+- [x] validation stricte des cibles dans `notes.controller.ts`
+
+#### Frontend - Feed Component
+- [ ] Mettre à jour `Feed.vue` pour utiliser `GET /api/v1/feed` avec pagination
+- [ ] Afficher les raisons de l'affichage (via `targets` ou tags correspondants)
+- [ ] Filtres côté client
+
+### Critères d'acceptation
+- Un étudiant ne voit que les notes qui lui sont destinées (sa classe, ses groupes, ou public)
+- Les notes "publiques" sont visibles par tous
+- Performance acceptable (< 200ms) pour la requête de feed
+
 
 ### Objectifs
 Implémenter le feed d'actualités avec filtrage et assignation par thèmes/catégories.

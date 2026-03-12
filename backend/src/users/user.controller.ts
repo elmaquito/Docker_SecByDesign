@@ -208,7 +208,14 @@ export const getUserProfile = async (req: any, res: Response) => {
 
   try {
     const result = await pool.query(
-      `SELECT p.*, u.username, u.role 
+      `SELECT p.*, u.username, u.role,
+              COALESCE(
+                 (SELECT json_agg(json_build_object('id', t.id, 'name', t.name, 'type', t.type, 'meta', t.meta)) 
+                  FROM user_tags ut 
+                  JOIN tags t ON ut.tag_id = t.id 
+                  WHERE ut.user_id = p.user_id),
+                 '[]'::json
+              ) as tags
        FROM profiles p
        JOIN users u ON p.user_id = u.id
        WHERE p.user_id = $1`,
@@ -216,10 +223,10 @@ export const getUserProfile = async (req: any, res: Response) => {
     );
 
     if (result.rows.length === 0) {
-      // If no profile exists, return basic user info if user exists
+      // If no profile exists, check if user exists
       const userRes = await pool.query('SELECT id, username, role FROM users WHERE id = $1', [userId]);
       if (userRes.rows.length === 0) return res.status(404).json({ error: 'User not found' });
-      return res.json({ ...userRes.rows[0], profile: null });
+      return res.json({ ...userRes.rows[0], profile: null, tags: [] });
     }
 
     res.json(result.rows[0]);
@@ -238,26 +245,69 @@ export const updateUserProfile = async (req: any, res: Response) => {
   }
 
   try {
-    const { classe, promotion, niveau } = profileUpdateSchema.parse(req.body);
+    const { classe, promotion, niveau, tags } = profileUpdateSchema.parse(req.body);
 
-    const result = await pool.query(
-      `INSERT INTO profiles (user_id, classe, promotion, niveau)
-       VALUES ($1, $2, $3, $4)
-       ON CONFLICT (user_id) 
-       DO UPDATE SET 
-         classe = EXCLUDED.classe,
-         promotion = EXCLUDED.promotion,
-         niveau = EXCLUDED.niveau,
-         updated_at = NOW()
-       RETURNING *`,
-      [userId, classe, promotion, niveau]
-    );
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
 
-    res.json(result.rows[0]);
-  } catch (err) {
-     if (err instanceof z.ZodError) return res.status(400).json({ error: err.errors });
-     console.error('Error updating profile:', err);
-     res.status(500).json({ error: 'Internal error' });
+      // Update Profile
+      await client.query(
+        `INSERT INTO profiles (user_id, classe, promotion, niveau)
+         VALUES ($1, $2, $3, $4)
+         ON CONFLICT (user_id) 
+         DO UPDATE SET 
+           classe = EXCLUDED.classe,
+           promotion = EXCLUDED.promotion,
+           niveau = EXCLUDED.niveau,
+           updated_at = NOW()`,
+        [userId, classe, promotion, niveau]
+      );
+
+      // Update Tags if provided
+      if (tags) {
+        await client.query('DELETE FROM user_tags WHERE user_id = $1', [userId]);
+        if (tags.length > 0) {
+           // Insert new tags
+           // Note: We could optimize with bulk insert, but loop is fine for MVP
+           for (const tagId of tags) {
+              await client.query('INSERT INTO user_tags (user_id, tag_id) VALUES ($1, $2)', [userId, tagId]);
+           }
+        }
+      }
+
+      await client.query('COMMIT');
+
+      // Fetch updated profile to return
+      // We can reuse getUserProfile logic or just redundant query here
+      const result = await client.query(
+        `SELECT p.*, u.username, u.role,
+                COALESCE(
+                   (SELECT json_agg(json_build_object('id', t.id, 'name', t.name, 'type', t.type)) 
+                    FROM user_tags ut 
+                    JOIN tags t ON ut.tag_id = t.id 
+                    WHERE ut.user_id = p.user_id),
+                   '[]'::json
+                ) as tags
+         FROM profiles p
+         JOIN users u ON p.user_id = u.id
+         WHERE p.user_id = $1`,
+        [userId]
+      );
+      
+      res.json(result.rows[0]);
+
+    } catch (e) {
+      await client.query('ROLLBACK');
+      throw e;
+    } finally {
+      client.release();
+    }
+  } catch (err: any) {
+    if (err instanceof z.ZodError) return res.status(400).json({ error: err.errors });
+    if (err.code === '23503') return res.status(400).json({ error: 'Invalid tag ID' }); // FK violation
+    console.error('Error updating profile:', err);
+    res.status(500).json({ error: 'Internal error' });
   }
 };
 

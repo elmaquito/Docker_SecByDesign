@@ -130,6 +130,14 @@ export const createNote = async (req: any, res: Response) => {
       }
       
       if (tags && tags.length > 0) {
+        // Validate tags existence
+        const tagRes = await client.query('SELECT id FROM tags WHERE id = ANY($1)', [tags]);
+        if (tagRes.rowCount !== tags.length) {
+            const foundIds = tagRes.rows.map((r: any) => r.id);
+            const missing = tags.filter((id: number) => !foundIds.includes(id));
+            throw new z.ZodError([{ path: ['tags'], message: `Tags IDs introuvables: ${missing.join(', ')}`, code: "custom" }]);
+        }
+
         for (const tagId of tags) {
           await client.query('INSERT INTO note_tags (note_id, tag_id) VALUES ($1, $2)', [note.id, tagId]);
         }
@@ -137,6 +145,14 @@ export const createNote = async (req: any, res: Response) => {
 
       if (targets && targets.length > 0) {
         for (const target of targets) {
+          // Strict validation for 'classe' target
+          if (target.type === 'classe' && target.value) {
+             const classRes = await client.query("SELECT 1 FROM tags WHERE type='classe' AND name=$1", [target.value]);
+             if (classRes.rowCount === 0) {
+                throw new z.ZodError([{ path: ['targets'], message: `Classe '${target.value}' introuvable`, code: "custom" }]);
+             }
+          }
+
           await client.query(
             'INSERT INTO note_targets (note_id, target_type, target_value) VALUES ($1, $2, $3)', 
              [note.id, target.type, target.value || null]

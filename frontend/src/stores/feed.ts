@@ -2,9 +2,10 @@
 import { defineStore } from 'pinia'
 import { ref, reactive } from 'vue'
 import { API_V1_BASE_URL } from '../config/api'
+import type { Note } from '../types/models'
 
 export const useFeedStore = defineStore('feed', () => {
-  const notes = ref<any[]>([])
+  const notes = ref<Note[]>([])
   const loading = ref(false)
   const error = ref<string | null>(null)
   const page = ref(1)
