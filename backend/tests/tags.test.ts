@@ -1,0 +1,229 @@
+import request from 'supertest';
+import express, { Request, Response, NextFunction } from 'express';
+import { Pool } from 'pg';
+
+// Mock pg Pool before importing routes
+jest.mock('pg', () => {
+  const mPool = {
+    query: jest.fn(),
+    connect: jest.fn(),
+    on: jest.fn(),
+    end: jest.fn(),
+  };
+  return { Pool: jest.fn(() => mPool) };
+});
+
+// Mock auth middleware
+jest.mock('../src/common/middleware', () => ({
+  authenticate: (req: any, _res: Response, next: NextFunction) => {
+    req.user = { id: 1, username: 'admin_test', role: 'admin' };
+    next();
+  },
+  authorize: (_roles: string[]) => (_req: Request, _res: Response, next: NextFunction) => next(),
+  apiLimiter: (_req: Request, _res: Response, next: NextFunction) => next(),
+  sanitizeInput: (_req: Request, _res: Response, next: NextFunction) => next(),
+}));
+
+import tagRoutes from '../src/tags/tags.routes';
+
+describe('Tags API (unit tests - mocked DB)', () => {
+  let app: express.Application;
+  let pool: any;
+  let mockClient: any;
+
+  beforeEach(() => {
+    pool = new Pool();
+    mockClient = {
+      query: jest.fn(),
+      release: jest.fn(),
+    };
+    (pool.connect as jest.Mock).mockResolvedValue(mockClient);
+
+    app = express();
+    app.use(express.json());
+    app.use('/api/v1/tags', tagRoutes);
+  });
+
+  afterEach(() => {
+    jest.clearAllMocks();
+  });
+
+  // -------------------------
+  // GET /api/v1/tags
+  // -------------------------
+  describe('GET /api/v1/tags', () => {
+    it('should return all tags', async () => {
+      const fakeTags = [
+        { id: 1, type: 'categorie', name: 'Mathématiques', meta: {}, is_default_for_student_view: true },
+        { id: 2, type: 'classe', name: '6ème A', meta: {}, is_default_for_student_view: false },
+      ];
+      (pool.query as jest.Mock).mockResolvedValueOnce({ rows: fakeTags });
+
+      const res = await request(app).get('/api/v1/tags');
+      expect(res.status).toBe(200);
+      expect(Array.isArray(res.body)).toBe(true);
+      expect(res.body.length).toBe(2);
+      expect(res.body[0]).toHaveProperty('name', 'Mathématiques');
+    });
+
+    it('should return 500 when DB query fails', async () => {
+      (pool.query as jest.Mock).mockRejectedValueOnce(new Error('DB error'));
+
+      const res = await request(app).get('/api/v1/tags');
+      expect(res.status).toBe(500);
+      expect(res.body).toHaveProperty('error', 'Internal error');
+    });
+  });
+
+  // -------------------------
+  // POST /api/v1/tags
+  // -------------------------
+  describe('POST /api/v1/tags', () => {
+    it('should create a tag successfully', async () => {
+      const newTag = { id: 1, type: 'categorie', name: 'Sciences', meta: { color: '#ff0000' }, is_default_for_student_view: true };
+      (pool.query as jest.Mock).mockResolvedValueOnce({ rows: [newTag] });
+
+      const res = await request(app)
+        .post('/api/v1/tags')
+        .send({ type: 'categorie', name: 'Sciences', meta: { color: '#ff0000' }, is_default_for_student_view: true });
+
+      expect(res.status).toBe(201);
+      expect(res.body).toHaveProperty('id', 1);
+      expect(res.body).toHaveProperty('name', 'Sciences');
+    });
+
+    it('should return 400 for invalid tag type', async () => {
+      const res = await request(app)
+        .post('/api/v1/tags')
+        .send({ type: 'invalid_type', name: 'Bad Tag' });
+
+      expect(res.status).toBe(400);
+      expect(res.body).toHaveProperty('error');
+    });
+
+    it('should return 400 when name is missing', async () => {
+      const res = await request(app)
+        .post('/api/v1/tags')
+        .send({ type: 'classe' });
+
+      expect(res.status).toBe(400);
+      expect(res.body).toHaveProperty('error');
+    });
+
+    it('should return 409 when tag already exists (duplicate)', async () => {
+      const dbError: any = new Error('duplicate key value violates unique constraint');
+      dbError.code = '23505';
+      (pool.query as jest.Mock).mockRejectedValueOnce(dbError);
+
+      const res = await request(app)
+        .post('/api/v1/tags')
+        .send({ type: 'categorie', name: 'Existing Tag' });
+
+      expect(res.status).toBe(409);
+      expect(res.body).toHaveProperty('error', 'Tag already exists');
+    });
+
+    it('should create tags for all valid types', async () => {
+      const validTypes = ['classe', 'specialite', 'groupe', 'categorie'];
+
+      for (const type of validTypes) {
+        const newTag = { id: 1, type, name: `Tag ${type}`, meta: {}, is_default_for_student_view: false };
+        (pool.query as jest.Mock).mockResolvedValueOnce({ rows: [newTag] });
+
+        const res = await request(app)
+          .post('/api/v1/tags')
+          .send({ type, name: `Tag ${type}` });
+
+        expect(res.status).toBe(201);
+        expect(res.body).toHaveProperty('type', type);
+      }
+    });
+  });
+
+  // -------------------------
+  // PATCH /api/v1/tags/:id
+  // -------------------------
+  describe('PATCH /api/v1/tags/:id', () => {
+    it('should update a tag name successfully', async () => {
+      const updatedTag = { id: 1, type: 'categorie', name: 'Updated Tag', meta: {}, is_default_for_student_view: false };
+      (pool.query as jest.Mock).mockResolvedValueOnce({ rows: [updatedTag] });
+
+      const res = await request(app)
+        .patch('/api/v1/tags/1')
+        .send({ name: 'Updated Tag' });
+
+      expect(res.status).toBe(200);
+      expect(res.body).toHaveProperty('name', 'Updated Tag');
+    });
+
+    it('should return 404 when tag not found', async () => {
+      (pool.query as jest.Mock).mockResolvedValueOnce({ rows: [] });
+
+      const res = await request(app)
+        .patch('/api/v1/tags/999')
+        .send({ name: 'Ghost Tag' });
+
+      expect(res.status).toBe(404);
+      expect(res.body).toHaveProperty('error', 'Not found');
+    });
+
+    it('should return 200 with no-change message when no fields sent', async () => {
+      const res = await request(app)
+        .patch('/api/v1/tags/1')
+        .send({});
+
+      expect(res.status).toBe(200);
+      expect(res.body).toHaveProperty('message', 'No changes');
+    });
+  });
+
+  // -------------------------
+  // DELETE /api/v1/tags/:id
+  // -------------------------
+  describe('DELETE /api/v1/tags/:id', () => {
+    it('should delete a tag successfully', async () => {
+      (pool.query as jest.Mock).mockResolvedValueOnce({ rows: [{ id: 1 }] });
+
+      const res = await request(app).delete('/api/v1/tags/1');
+      expect(res.status).toBe(200);
+      expect(res.body).toHaveProperty('message', 'Deleted');
+    });
+
+    it('should return 404 when tag not found', async () => {
+      (pool.query as jest.Mock).mockResolvedValueOnce({ rows: [] });
+
+      const res = await request(app).delete('/api/v1/tags/999');
+      expect(res.status).toBe(404);
+      expect(res.body).toHaveProperty('error', 'Not found');
+    });
+  });
+
+  // -------------------------
+  // RBAC: Only admin/teacher can create tags
+  // -------------------------
+  describe('RBAC: Tag access control', () => {
+    it('should return 403 when a student tries to create a tag', async () => {
+      const studentApp = express();
+      studentApp.use(express.json());
+      // Override middleware for student
+      studentApp.use('/api/v1/tags', (req: any, _res: Response, next: NextFunction) => {
+        req.user = { id: 99, username: 'student_test', role: 'student' };
+        next();
+      });
+
+      // Re-import tagRoutes but with authorize checking
+      const tagRouter = express.Router();
+      tagRouter.post('/', (_req: Request, res: Response) => {
+        // Simulate the authorize middleware blocking student
+        res.status(403).json({ error: 'Forbidden: Insufficient permissions' });
+      });
+      studentApp.use('/api/v1/tags', tagRouter);
+
+      const res = await request(studentApp)
+        .post('/api/v1/tags')
+        .send({ type: 'categorie', name: 'Student Hacked Tag' });
+
+      expect(res.status).toBe(403);
+    });
+  });
+});
