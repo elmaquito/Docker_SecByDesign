@@ -1,3 +1,30 @@
+  # --- WAF (Nginx + ModSecurity) ---
+  waf:
+    image: owasp/modsecurity:nginx
+    container_name: waf
+    depends_on:
+      - backend
+    environment:
+      - BACKEND_HOST=backend
+      - BACKEND_PORT=3000
+    ports:
+      - "8080:80"
+    volumes:
+      - ./config/waf/modsecurity.conf:/etc/modsecurity/modsecurity.conf:ro
+      - ./config/waf/crs:/etc/modsecurity/crs:ro
+    networks:
+      - net-api
+      - net-public
+    security_opt:
+      - no-new-privileges:true
+    deploy:
+      replicas: 1
+      labels:
+        - "traefik.enable=true"
+        - "traefik.http.routers.waf.rule=Host(`api.notimatic.com`)"
+        - "traefik.http.routers.waf.entrypoints=websecure"
+        - "traefik.http.routers.waf.middlewares=rate-limit,sec-headers"
+        - "traefik.http.services.waf.loadbalancer.server.port=80"
 version: '3.8'
 
 services:

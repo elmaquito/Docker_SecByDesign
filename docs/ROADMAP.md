@@ -1,3 +1,61 @@
+# Roadmap Sécurité & Infrastructure – Stack Sécurité (Nouvelle section)
+
+## Phase 1 : Socle réseau et proxy (Jours 1-2)
+- Déploiement Traefik (reverse proxy) via Docker Compose
+- Déploiement du frontend et backend sur réseaux séparés
+- **Tests** :
+  - Vérification du routage HTTP/HTTPS (curl, navigateur)
+  - Tests automatisés de disponibilité (Ansible ping, healthchecks)
+- **Documentation** : Schéma réseau, variables d’environnement, secrets
+
+## Phase 2 : Ajout du WAF (Jours 2-3)
+- Déploiement d’un WAF (Nginx + ModSecurity ou openappsec) devant le backend
+- Configuration de règles de filtrage (patterns, payloads, headers)
+- **Tests** :
+  - Attaques XSS/SQLi simulées (OWASP ZAP, curl)
+  - Vérification du blocage/logging par le WAF
+- **Documentation** : Règles WAF, intégration avec Traefik
+
+## Phase 3 : Firewall réseau (Jours 3-4)
+- Déploiement d’un firewall (OPNSENSE en VM ou container)
+- Mise en place des règles de filtrage, port mirroring vers IDS
+- **Tests** :
+  - Scans de ports (nmap)
+  - Tentatives d’accès non autorisées
+  - Vérification du mirroring (paquets capturés par IDS)
+- **Documentation** : Règles FW, schéma de flux
+
+## Phase 4 : API Gateway & API Firewall (Jours 4-5)
+- Déploiement Wallarm API Firewall (ou équivalent)
+- Configuration des règles d’authentification, tokens, payloads
+- **Tests** :
+  - Appels API avec/ sans tokens, payloads malicieux
+  - Vérification du filtrage et des logs
+- **Documentation** : Mapping endpoints/API GW
+
+## Phase 5 : SIEM & IDS (Jours 5-6)
+- Déploiement OSSEC/Wazuh (SIEM/IDS) sur réseau dédié
+- Connexion du port mirroring FW → IDS
+- Collecte centralisée des logs (Traefik, WAF, API GW, backend)
+- **Tests** :
+  - Génération d’événements suspects (tentatives brute-force, accès interdits)
+  - Vérification de la détection/corrélation dans le SIEM
+- **Documentation** : Procédures de collecte, dashboard SIEM
+
+## Phase 6 : Automatisation & Validation (Jours 6-7)
+- Écriture de playbooks Ansible pour déploiement et tests automatisés
+- Automatisation des tests de sécurité (lint, vulnérabilités, E2E, attaques simulées)
+- **Tests** :
+  - Exécution complète du pipeline Ansible (déploiement + tests)
+  - CI/CD : Intégration des tests dans GitHub Actions
+- **Documentation** : Guide de déploiement, scripts/tests, .env exemple
+
+## Phase 7 : Documentation & Revue finale (Jour 7)
+- Rédaction de la documentation d’architecture, sécurité, correspondances outils/fonctions
+- Checklist de conformité (séparation réseau, gestion secrets, logs, port mirroring, etc.)
+- **Tests** :
+  - Revue croisée (peer review)
+  - Validation finale de la stack sur environnement cible
 # Roadmap NOTIMATIC - MVP Feed d'actualités
 
 ## Vue d'ensemble
