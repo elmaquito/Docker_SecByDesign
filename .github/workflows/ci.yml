@@ -1,10 +1,11 @@
-name: CI/CD Pipeline
+name: CI - Strict
 
 on:
   push:
     branches: [ main, develop, 'feature/**' ]
   pull_request:
     branches: [ main, develop ]
+  workflow_dispatch: {}
 
 permissions:
   contents: read
@@ -12,42 +13,39 @@ permissions:
   actions: read
 
 env:
-  NODE_VERSION: '20.x'
+  NODE_VERSION: '20'
   POSTGRES_VERSION: '16'
 
 jobs:
-  # ============================================================================
-  # BACKEND JOBS
-  # ============================================================================
-  
   backend-lint:
     name: Backend - Lint
     runs-on: ubuntu-latest
-    
+    strategy:
+      matrix:
+        node: [18, 20]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: ${{ env.NODE_VERSION }}
+          node-version: ${{ matrix.node }}
           cache: 'npm'
           cache-dependency-path: backend/package-lock.json
-      
       - name: Install dependencies
         working-directory: backend
         run: npm ci
-      
       - name: Run ESLint
         working-directory: backend
-        run: npm run lint || echo "⚠️ Linting script not found, skipping..."
-        continue-on-error: true
-  
+        run: npm run lint
+
   backend-test:
-    name: Backend - Test
+    name: Backend - Test & Coverage
     runs-on: ubuntu-latest
-    
+    needs: backend-lint
+    strategy:
+      matrix:
+        node: [18, 20]
     services:
       postgres:
         image: postgres:16
@@ -62,31 +60,26 @@ jobs:
           --health-retries 5
         ports:
           - 5432:5432
-    
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: ${{ env.NODE_VERSION }}
+          node-version: ${{ matrix.node }}
           cache: 'npm'
           cache-dependency-path: backend/package-lock.json
-      
       - name: Install dependencies
         working-directory: backend
         run: npm ci
-      
-      - name: Setup test database
+      - name: Setup Test Database
         env:
           PGPASSWORD: test_password
         run: |
           psql -h localhost -U user -d notimatic_test -f backend/init.sql
-          # Run migrations (to be implemented)
-          # bash backend/migrate.sh || echo "⚠️ Migrations not yet implemented"
-      
-      - name: Run tests
+          # Run migrations (best effort)
+          bash backend/migrate.sh || echo "Migration script returned non-zero (check logs)"
+      - name: Run tests with coverage
         working-directory: backend
         env:
           DB_HOST: localhost
@@ -94,371 +87,166 @@ jobs:
           DB_PASSWORD: test_password
           DB_NAME: notimatic_test
           JWT_SECRET: test_jwt_secret
-        run: npm test || echo "⚠️ Tests not yet implemented"
-        continue-on-error: true
-  
-  backend-build:
-    name: Backend - Build
-    runs-on: ubuntu-latest
-    
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
-          cache-dependency-path: backend/package-lock.json
-      
-      - name: Install dependencies
-        working-directory: backend
-        run: npm ci
-      
-      - name: Build TypeScript
-        working-directory: backend
-        run: npm run build
-      
-      - name: Upload build artifacts
+          REFRESH_TOKEN_SECRET: test_refresh_secret
+        run: npm test -- --coverage
+      - name: Upload coverage artifact
         uses: actions/upload-artifact@v4
         with:
-          name: backend-dist
-          path: backend/dist
-          retention-days: 7
-  
-  # ============================================================================
-  # FRONTEND JOBS
-  # ============================================================================
-  
+          name: backend-coverage
+          path: backend/coverage
+      - name: Check backend coverage thresholds
+        working-directory: backend
+        run: |
+          node -e "const fs=require('fs');const p='coverage/coverage-final.json';if(!fs.existsSync(p)){console.error('coverage file missing');process.exit(1);}const c=JSON.parse(fs.readFileSync(p));const total=c.total||c;const lines=(total.lines&&total.lines.pct)||((total.statements&&total.statements.pct)||0);if(lines<80){console.error('Backend coverage below 80%:',lines);process.exit(1);}console.log('Backend coverage OK:',lines);"
+
   frontend-lint:
     name: Frontend - Lint
     runs-on: ubuntu-latest
-    
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: ${{ env.NODE_VERSION }}
+          node-version: 20
           cache: 'npm'
           cache-dependency-path: frontend/package-lock.json
-      
       - name: Install dependencies
         working-directory: frontend
         run: npm ci
-      
       - name: Run ESLint
         working-directory: frontend
-        run: npm run lint || echo "⚠️ Linting script not found, skipping..."
-        continue-on-error: true
-  
+        run: npm run lint
+
   frontend-test:
-    name: Frontend - Test
+    name: Frontend - Test & Coverage
     runs-on: ubuntu-latest
-    
+    needs: frontend-lint
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: ${{ env.NODE_VERSION }}
+          node-version: 20
           cache: 'npm'
           cache-dependency-path: frontend/package-lock.json
-      
       - name: Install dependencies
         working-directory: frontend
         run: npm ci
-      
-      - name: Run unit tests
+      - name: Run Vitest with coverage
         working-directory: frontend
-        run: npm test || echo "⚠️ Tests not yet implemented"
-        continue-on-error: true
-  
-  frontend-build:
-    name: Frontend - Build
-    runs-on: ubuntu-latest
-    
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
-          cache-dependency-path: frontend/package-lock.json
-      
-      - name: Install dependencies
-        working-directory: frontend
-        run: npm ci
-      
-      - name: Build production bundle
-        working-directory: frontend
-        run: npm run build
-      
-      - name: Upload build artifacts
+        run: npm test -- --coverage
+      - name: Upload frontend coverage
         uses: actions/upload-artifact@v4
         with:
-          name: frontend-dist
-          path: frontend/dist
-          retention-days: 7
-  
-  # ============================================================================
-  # SECURITY JOBS
-  # ============================================================================
-  
-  security-audit:
-    name: Security - Audit Dependencies
+          name: frontend-coverage
+          path: frontend/coverage
+      - name: Check frontend coverage thresholds
+        working-directory: frontend
+        run: |
+          node -e "const fs=require('fs');const p='coverage/coverage-summary.json';if(!fs.existsSync(p)){console.error('coverage file missing');process.exit(1);}const c=JSON.parse(fs.readFileSync(p));const lines=(c.total&&c.total.lines&&c.total.lines.pct)||0; if(lines<70){console.error('Frontend coverage below 70%:',lines);process.exit(1);}console.log('Frontend coverage OK:',lines);"
+
+  npm-audit:
+    name: npm audit (backend+frontend)
     runs-on: ubuntu-latest
-    
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: ${{ env.NODE_VERSION }}
-      
-      - name: Audit backend dependencies
+          node-version: 20
+      - name: npm audit backend
         working-directory: backend
-        run: |
-          npm audit --audit-level=moderate || echo "⚠️ Vulnerabilities found in backend"
-        continue-on-error: true
-      
-      - name: Audit frontend dependencies
+        run: npm ci && npm audit --audit-level=critical
+      - name: npm audit frontend
         working-directory: frontend
-        run: |
-          npm audit --audit-level=moderate || echo "⚠️ Vulnerabilities found in frontend"
-        continue-on-error: true
-  
-  security-trivy:
-    name: Security - Trivy Scan
+        run: npm ci && npm audit --audit-level=critical
+
+  trivy-scan:
+    name: Trivy image scan
     runs-on: ubuntu-latest
-    
-    env:
-      SARIF_FILE: 'trivy-results.sarif'
-    
+    needs: [backend-test, frontend-test]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      
-      - name: Run Trivy vulnerability scanner (Filesystem)
-        uses: aquasecurity/trivy-action@master
-        with:
-          scan-type: 'fs'
-          scan-ref: '.'
-          format: 'sarif'
-          output: ${{ env.SARIF_FILE }}
-          severity: 'CRITICAL,HIGH'
-        continue-on-error: true
-      
-      - name: Check if SARIF file exists
-        id: check_sarif
+      - name: Build Docker images
         run: |
-          echo "Current directory: $(pwd)"
-          echo "Files in current directory:"
-          ls -la
-          if [ -f "${{ env.SARIF_FILE }}" ]; then
-            echo "✅ SARIF file found: ${{ env.SARIF_FILE }}"
-            echo "sarif_exists=true" >> $GITHUB_OUTPUT
-          else
-            echo "sarif_exists=false" >> $GITHUB_OUTPUT
-            echo "⚠️ SARIF file not generated, skipping upload"
-          fi
-      
-      - name: Upload Trivy results to GitHub Security tab
-        if: steps.check_sarif.outputs.sarif_exists == 'true'
-        uses: github/codeql-action/upload-sarif@v4
+          docker build -t notimatic-backend:ci -f backend/Dockerfile backend
+          docker build -t notimatic-frontend:ci -f frontend/Dockerfile frontend
+      - name: Run Trivy scan on backend image
+        uses: aquasecurity/trivy-action@v0.19.0
         with:
-          sarif_file: ${{ env.SARIF_FILE }}
-        continue-on-error: true
-  
-  # ============================================================================
-  # DOCKER JOBS
-  # ============================================================================
-  
+          image-ref: notimatic-backend:ci
+          severity: CRITICAL
+      - name: Run Trivy scan on frontend image
+        uses: aquasecurity/trivy-action@v0.19.0
+        with:
+          image-ref: notimatic-frontend:ci
+          severity: CRITICAL
+
   docker-build:
-    name: Docker - Build Images
+    name: Docker Build
     runs-on: ubuntu-latest
-    needs: [backend-build, frontend-build]
-    
+    needs: [trivy-scan]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-      
-      - name: Build backend image
-        uses: docker/build-push-action@v5
+      - name: Build multi-stage images
+        run: |
+          docker build -t notimatic-backend:latest -f backend/Dockerfile backend
+          docker build -t notimatic-frontend:latest -f frontend/Dockerfile frontend
+      - name: Save images (optional)
+        run: |
+          docker save notimatic-backend:latest -o notimatic-backend.tar || true
+          docker save notimatic-frontend:latest -o notimatic-frontend.tar || true
+      - name: Upload images as artifacts (optional)
+        uses: actions/upload-artifact@v4
         with:
-          context: ./backend
-          file: ./infrastructure/Dockerfile.backend
-          push: false
-          tags: notimatic-backend:${{ github.sha }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-        continue-on-error: true
-      
-      - name: Build frontend image
-        uses: docker/build-push-action@v5
-        with:
-          context: ./frontend
-          file: ./infrastructure/Dockerfile.frontend
-          push: false
-          tags: notimatic-frontend:${{ github.sha }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-        continue-on-error: true
-  
-  docker-scan:
-    name: Docker - Scan Images
+          name: docker-images
+          path: |
+            notimatic-backend.tar
+            notimatic-frontend.tar
+
+  e2e-smoke:
+    name: E2E Smoke (Playwright)
     runs-on: ubuntu-latest
-    needs: docker-build
-    if: success() || failure()
-    
+    if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
+    needs: [docker-build]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-      
-      - name: Build backend image for scanning
-        uses: docker/build-push-action@v5
-        with:
-          context: ./backend
-          file: ./infrastructure/Dockerfile.backend
-          load: true
-          tags: notimatic-backend:scan
-        continue-on-error: true
-      
-      - name: Run Trivy scanner on backend image
-        uses: aquasecurity/trivy-action@master
-        with:
-          image-ref: 'notimatic-backend:scan'
-          format: 'table'
-          severity: 'CRITICAL,HIGH'
-        continue-on-error: true
-  
-  # ============================================================================
-  # E2E TESTS (Optional)
-  # ============================================================================
-  
-  e2e-tests:
-    name: E2E Tests
-    runs-on: ubuntu-latest
-    needs: [backend-build, frontend-build]
-    if: github.event_name == 'pull_request'
-    
-    services:
-      postgres:
-        image: postgres:16
-        env:
-          POSTGRES_USER: user
-          POSTGRES_PASSWORD: e2e_password
-          POSTGRES_DB: notimatic_e2e
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-        ports:
-          - 5432:5432
-    
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: ${{ env.NODE_VERSION }}
-      
-      - name: Install Playwright
+          node-version: 20
+      - name: Install dependencies
         run: |
-          npm install -D @playwright/test
-          npx playwright install --with-deps
-        continue-on-error: true
-      
-      - name: Setup database
-        env:
-          PGPASSWORD: e2e_password
+          cd frontend && npm ci
+          cd ../backend && npm ci
+      - name: Start services (docker-compose)
         run: |
-          psql -h localhost -U user -d notimatic_e2e -f backend/init.sql
-      
-      - name: Start backend
-        working-directory: backend
-        env:
-          DB_HOST: localhost
-          DB_USER: user
-          DB_PASSWORD: e2e_password
-          DB_NAME: notimatic_e2e
-          JWT_SECRET: e2e_jwt_secret
-          PORT: 3000
-        run: |
-          npm ci
-          npm run build
-          npm start &
-          sleep 5
-      
-      - name: Start frontend
-        working-directory: frontend
-        run: |
-          npm ci
-          npm run build
-          npm run preview &
-          sleep 5
-      
-      - name: Run E2E tests
-        run: |
-          npx playwright test || echo "⚠️ E2E tests not yet implemented"
-        continue-on-error: true
-      
-      - name: Upload test results
-        uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: playwright-report
-          path: playwright-report/
-          retention-days: 7
-        continue-on-error: true
-  
-  # ============================================================================
-  # SUMMARY JOB
-  # ============================================================================
-  
-  ci-summary:
-    name: CI Summary
+          # Ajustez le chemin si nécessaire; utilisation proposée : Docker_SecByDesign/infrastructure/docker-compose.yml
+          docker compose -f Docker_SecByDesign/infrastructure/docker-compose.yml up -d
+      - name: Wait services
+        run: sleep 20
+      - name: Run Playwright smoke tests
+        working-directory: tests/e2e
+        run: npx playwright test --config=playwright.config.ts --project=chromium --reporter=list
+
+  upload-reports:
+    name: Upload Reports
     runs-on: ubuntu-latest
-    needs: 
-      - backend-lint
-      - backend-test
-      - backend-build
-      - frontend-lint
-      - frontend-test
-      - frontend-build
-      - security-audit
-      - security-trivy
-    if: always()
-    
+    needs: [backend-test, frontend-test]
     steps:
-      - name: Check job statuses
-        run: |
-          echo "✅ CI Pipeline Complete"
-          echo "========================"
-          echo "Backend Lint: ${{ needs.backend-lint.result }}"
-          echo "Backend Test: ${{ needs.backend-test.result }}"
-          echo "Backend Build: ${{ needs.backend-build.result }}"
-          echo "Frontend Lint: ${{ needs.frontend-lint.result }}"
-          echo "Frontend Test: ${{ needs.frontend-test.result }}"
-          echo "Frontend Build: ${{ needs.frontend-build.result }}"
-          echo "Security Audit: ${{ needs.security-audit.result }}"
-          echo "Security Trivy: ${{ needs.security-trivy.result }}"
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Download backend coverage
+        uses: actions/download-artifact@v4
+        with:
+          name: backend-coverage
+      - name: Download frontend coverage
+        uses: actions/download-artifact@v4
+        with:
+          name: frontend-coverage
