@@ -7,18 +7,25 @@ on:
     branches: [ main, develop ]
   workflow_dispatch: {}
 
-permissions:
+name: CI - Strict
+
   contents: read
   security-events: write
   actions: read
 
 env:
   NODE_VERSION: '20'
+
+permissions:
   POSTGRES_VERSION: '16'
 
 jobs:
+
+env:
   backend-lint:
     name: Backend - Lint
+
+jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
