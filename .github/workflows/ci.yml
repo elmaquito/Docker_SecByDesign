@@ -90,6 +90,7 @@ jobs:
           REFRESH_TOKEN_SECRET: test_refresh_secret
         run: npm test -- --coverage
       - name: Upload coverage artifact
+        if: ${{ matrix.node == 20 }}
         uses: actions/upload-artifact@v4
         with:
           name: backend-coverage-${{ matrix.node }}
@@ -222,8 +223,9 @@ jobs:
         with:
           node-version: 20
       - name: Install dependencies
-        run: |
-          cd frontend && npm ci
+          npm ci --prefix frontend
+          npm ci --prefix backend
+          npm ci --prefix tests/e2e
           cd ../backend && npm ci
       - name: Install Playwright Browsers
         run: npx playwright install --with-deps chromium
