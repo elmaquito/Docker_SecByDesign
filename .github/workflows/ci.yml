@@ -7,25 +7,18 @@ on:
     branches: [ main, develop ]
   workflow_dispatch: {}
 
-name: CI - Strict
-
+permissions:
   contents: read
   security-events: write
   actions: read
 
 env:
   NODE_VERSION: '20'
-
-permissions:
   POSTGRES_VERSION: '16'
 
 jobs:
-
-env:
   backend-lint:
     name: Backend - Lint
-
-jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -99,7 +92,7 @@ jobs:
       - name: Upload coverage artifact
         uses: actions/upload-artifact@v4
         with:
-          name: backend-coverage
+          name: backend-coverage-${{ matrix.node }}
           path: backend/coverage
       - name: Check backend coverage thresholds
         working-directory: backend
@@ -232,6 +225,9 @@ jobs:
         run: |
           cd frontend && npm ci
           cd ../backend && npm ci
+      - name: Install Playwright Browsers
+        run: npx playwright install --with-deps chromium
+        working-directory: tests/e2e
       - name: Start services (docker-compose)
         run: |
           # Ajustez le chemin si nécessaire; utilisation proposée : Docker_SecByDesign/infrastructure/docker-compose.yml
@@ -252,7 +248,8 @@ jobs:
       - name: Download backend coverage
         uses: actions/download-artifact@v4
         with:
-          name: backend-coverage
+          pattern: backend-coverage-*
+          merge-multiple: true
       - name: Download frontend coverage
         uses: actions/download-artifact@v4
         with:
