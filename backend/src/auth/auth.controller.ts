@@ -71,7 +71,12 @@ export const login = async (req: Request, res: Response) => {
   }
 };
 
-export const logout = async (req: any, res: Response) => {
+import { Request } from 'express';
+interface UserRequest extends Request {
+  user: { id: number; username: string; role: string };
+}
+
+export const logout = async (req: UserRequest, res: Response) => {
   try {
     const refreshToken = req.cookies['refresh_token'];
     
@@ -166,7 +171,7 @@ export const refresh = async (req: Request, res: Response) => {
   }
 };
 
-export const revoke = async (req: any, res: Response) => {
+export const revoke = async (req: UserRequest, res: Response) => {
   try {
     await tokenService.revokeAllUserSessions(req.user.id);
     

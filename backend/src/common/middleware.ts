@@ -1,4 +1,4 @@
-import { NextFunction, Response } from 'express';
+import { NextFunction, Request, Response } from 'express';
 // import { Pool } from 'pg';
 import rateLimit from 'express-rate-limit';
 import validator from 'validator';
@@ -10,7 +10,7 @@ import { TokenService } from '../auth/token.service';
 const tokenService = new TokenService();
 
 // 1. Authenticate (Verify JWT with auto-refresh)
-export const authenticate = async (req: any, res: Response, next: NextFunction) => {
+export const authenticate = async (req: Request, res: Response, next: NextFunction) => {
   const accessToken = req.cookies['auth_token'];
   const refreshToken = req.cookies['refresh_token'];
   
@@ -89,7 +89,7 @@ export const authenticate = async (req: any, res: Response, next: NextFunction) 
 
 // 2. Authorize (Check Roles)
 export const authorize = (allowedRoles: string[]) => {
-  return (req: any, res: Response, next: NextFunction) => {
+  return (req: Request, res: Response, next: NextFunction) => {
     if (!req.user) {
       console.log('[Authorize] FAILED: No user in request');
       return res.status(401).json({ error: 'Unauthorized: No user context' });
@@ -136,7 +136,7 @@ export const commentLimiter = rateLimit({
 });
 
 // Sanitization Middleware
-export const sanitizeInput = (req: any, res: Response, next: NextFunction) => {
+export const sanitizeInput = (req: Request, res: Response, next: NextFunction) => {
   if (req.body) {
     for (const key in req.body) {
       if (typeof req.body[key] === 'string') {
@@ -149,7 +149,7 @@ export const sanitizeInput = (req: any, res: Response, next: NextFunction) => {
 };
 
 // 4. Global Error Handler
-export const errorHandler = (err: any, req: any, res: Response, _next: NextFunction) => {
+export const errorHandler = (err: unknown, req: Request, res: Response, _next: NextFunction) => {
   console.error('[Error] Uncaught Exception:', err);
   
   // Handle Zod errors (if any leak here, usually they are caught in controller)

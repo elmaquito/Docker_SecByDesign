@@ -1,7 +1,14 @@
 import { Router, Request, Response } from 'express';
 import { Pool } from 'pg';
+import { Request, Response, NextFunction } from 'express';
+type AuthMiddleware = (req: Request, res: Response, next: NextFunction) => void;
+type AuthorizeMiddleware = (roles: string[]) => (req: Request, res: Response, next: NextFunction) => void;
 
-export const createThemeRouter = (pool: Pool, authenticate: any, authorize: any) => {
+export const createThemeRouter = (
+  pool: Pool,
+  authenticate: AuthMiddleware,
+  authorize: AuthorizeMiddleware
+) => {
   const router = Router();
 
   router.get('/', authenticate, async (req: Request, res: Response) => {

@@ -18,7 +18,7 @@ export const getFeed = async (req: Request, res: Response) => {
     const userRole = req.user.role;
 
     const whereConditions: string[] = [];
-    const queryParams: any[] = [];
+    const queryParams: unknown[] = [];
     let paramIndex = 1;
 
     // 1. Determine Access Conditions based on Role/Profile
@@ -168,7 +168,7 @@ export const getFeed = async (req: Request, res: Response) => {
     const countRes = await pool.query(countQuery, countParams);
     const total = parseInt(countRes.rows[0].count);
 
-    const notes = result.rows.map((r: any) => ({
+    const notes = result.rows.map((r: unknown) => ({
       ...r,
       tags: r.tags || [],
       targets: r.targets || [],

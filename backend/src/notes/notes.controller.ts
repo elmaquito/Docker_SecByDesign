@@ -1,13 +1,13 @@
-import { Response } from 'express';
+import { Request, Response } from 'express';
 import { z } from 'zod';
 import { pool } from '../config/database';
 import { AuditLogger } from '../common/audit';
 import { NoteCreateSchema, NoteUpdateSchema } from './notes.schema';
 
-export const listNotes = async (req: any, res: Response) => {
+export const listNotes = async (req: Request, res: Response) => {
   try {
     let query: string;
-    let params: any[] = [];
+    let params: unknown[] = [];
     const role = req.user.role;
     const userId = req.user.id;
 
@@ -81,7 +81,7 @@ export const listNotes = async (req: any, res: Response) => {
     const result = await pool.query(query, params);
     
     // Map results to cleaner object structure
-    const notes = result.rows.map((r: any) => ({
+    const notes = result.rows.map((r: unknown) => ({
       id: r.id,
       user_id: r.user_id,
       title: r.title,
@@ -106,7 +106,7 @@ export const listNotes = async (req: any, res: Response) => {
   }
 };
 
-export const createNote = async (req: any, res: Response) => {
+export const createNote = async (req: Request, res: Response) => {
   try {
     const { title, content, theme_id, category_id, tags, targets } = NoteCreateSchema.parse(req.body);
     const userId = req.user.id;
@@ -133,7 +133,7 @@ export const createNote = async (req: any, res: Response) => {
         // Validate tags existence
         const tagRes = await client.query('SELECT id FROM tags WHERE id = ANY($1)', [tags]);
         if (tagRes.rowCount !== tags.length) {
-            const foundIds = tagRes.rows.map((r: any) => r.id);
+            const foundIds = tagRes.rows.map((r: unknown) => (r as { id: number }).id);
             const missing = tags.filter((id: number) => !foundIds.includes(id));
             throw new z.ZodError([{ path: ['tags'], message: `Tags IDs introuvables: ${missing.join(', ')}`, code: "custom" }]);
         }
@@ -180,14 +180,14 @@ export const createNote = async (req: any, res: Response) => {
     } finally {
       client.release();
     }
-  } catch (err: any) {
+  } catch (err: unknown) {
     if (err instanceof z.ZodError) return res.status(400).json({ error: err.errors });
     console.error('Error creating note:', err);
     res.status(500).json({ error: 'Internal error' });
   }
 };
 
-export const deleteNote = async (req: any, res: Response) => {
+export const deleteNote = async (req: Request, res: Response) => {
   try {
     const id = parseInt(req.params.id);
     if (isNaN(id)) return res.status(400).json({ error: 'Invalid ID' });
@@ -222,7 +222,7 @@ export const deleteNote = async (req: any, res: Response) => {
   }
 };
 
-export const getNote = async (req: any, res: Response) => {
+export const getNote = async (req: Request, res: Response) => {
   try {
     const id = parseInt(req.params.id);
     if (isNaN(id)) return res.status(400).json({ error: 'Invalid ID' });
@@ -281,7 +281,7 @@ export const getNote = async (req: any, res: Response) => {
   }
 };
 
-export const updateNote = async (req: any, res: Response) => {
+export const updateNote = async (req: Request, res: Response) => {
   try {
     const id = parseInt(req.params.id);
     if (isNaN(id)) return res.status(400).json({ error: 'Invalid ID' });
@@ -309,7 +309,7 @@ export const updateNote = async (req: any, res: Response) => {
       await client.query('BEGIN');
       
       const updates: string[] = [];
-      const values: any[] = [];
+      const values: unknown[] = [];
       let paramIndex = 1;
       
       if (title !== undefined) {
@@ -361,7 +361,7 @@ export const updateNote = async (req: any, res: Response) => {
 
 // --- Reactions ---
 
-export const getUserReaction = async (req: any, res: Response) => {
+export const getUserReaction = async (req: Request, res: Response) => {
   try {
     const noteId = parseInt(req.params.id);
     if (isNaN(noteId)) return res.status(400).json({ error: 'Invalid Note ID' });
@@ -378,7 +378,7 @@ export const getUserReaction = async (req: any, res: Response) => {
   }
 };
 
-export const addReaction = async (req: any, res: Response) => {
+export const addReaction = async (req: Request, res: Response) => {
   try {
     const noteId = parseInt(req.params.id);
     if (isNaN(noteId)) return res.status(400).json({ error: 'Invalid Note ID' });
@@ -419,7 +419,7 @@ export const addReaction = async (req: any, res: Response) => {
   }
 };
 
-export const removeReaction = async (req: any, res: Response) => {
+export const removeReaction = async (req: Request, res: Response) => {
   try {
     const noteId = parseInt(req.params.id);
     if (isNaN(noteId)) return res.status(400).json({ error: 'Invalid Note ID' });
@@ -438,7 +438,7 @@ export const removeReaction = async (req: any, res: Response) => {
 
 // --- Comments ---
 
-export const getComments = async (req: any, res: Response) => {
+export const getComments = async (req: Request, res: Response) => {
   try {
     const noteId = parseInt(req.params.id);
     if (isNaN(noteId)) return res.status(400).json({ error: 'Invalid ID' });
@@ -459,7 +459,7 @@ export const getComments = async (req: any, res: Response) => {
   }
 };
 
-export const addComment = async (req: any, res: Response) => {
+export const addComment = async (req: Request, res: Response) => {
   try {
     const noteId = parseInt(req.params.id);
     if (isNaN(noteId)) return res.status(400).json({ error: 'Invalid ID' });
@@ -495,7 +495,7 @@ export const addComment = async (req: any, res: Response) => {
   }
 };
 
-export const deleteComment = async (req: any, res: Response) => {
+export const deleteComment = async (req: Request, res: Response) => {
     // Left as exercise if needed (admins/owners)
     res.status(501).json({ error: 'Not implemented' });
 };

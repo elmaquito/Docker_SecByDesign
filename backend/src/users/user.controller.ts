@@ -5,7 +5,7 @@ import { pool } from '../config/database';
 import { AuditLogger } from '../common/audit';
 import { userCreateSchema, accountUpdateSchema, profileUpdateSchema } from './user.schema';
 
-export const createUser = async (req: any, res: Response) => {
+export const createUser = async (req: Request, res: Response) => {
   try {
     const { username, password, role } = userCreateSchema.parse(req.body);
     const hash = await argon2.hash(password, { type: argon2.argon2id });
@@ -15,7 +15,7 @@ export const createUser = async (req: any, res: Response) => {
       [username, hash, role]
     );
     res.status(201).json(result.rows[0]);
-  } catch (err: any) {
+  } catch (err: unknown) {
     if (err.code === '23505') return res.status(409).json({ error: 'Username already exists' });
     if (err instanceof z.ZodError) return res.status(400).json({ error: err.errors });
     res.status(500).json({ error: 'Internal error' });
@@ -31,7 +31,7 @@ export const listUsers = async (req: Request, res: Response) => {
   }
 };
 
-export const getAccount = async (req: any, res: Response) => {
+export const getAccount = async (req: Request, res: Response) => {
   try {
     const result = await pool.query(
       'SELECT id, username, email, phone, role, created_at FROM users WHERE id = $1',
@@ -49,7 +49,7 @@ export const getAccount = async (req: any, res: Response) => {
   }
 };
 
-export const updateAccount = async (req: any, res: Response) => {
+export const updateAccount = async (req: Request, res: Response) => {
   try {
     // Students cannot edit their account
     if (req.user.role === 'student') {
@@ -61,7 +61,7 @@ export const updateAccount = async (req: any, res: Response) => {
     
     // Build update query dynamically
     const updates: string[] = [];
-    const values: any[] = [];
+    const values: unknown[] = [];
     let paramIndex = 1;
     
     if (email !== undefined) {
@@ -117,14 +117,14 @@ export const setupAdmin = async (req: Request, res: Response) => {
       [username, hash]
     );
     res.json({ message: `Admin created (${username})` });
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('Setup error:', err);
     res.status(500).json({ error: 'Internal error' });
   }
 };
 
 
-export const exportData = async (req: any, res: Response) => {
+export const exportData = async (req: Request, res: Response) => {
   const userId = parseInt(req.params.id);
   
   if (req.user.id !== userId && req.user.role !== 'admin') {
@@ -163,7 +163,7 @@ export const exportData = async (req: any, res: Response) => {
   }
 };
 
-export const deleteUser = async (req: any, res: Response) => {
+export const deleteUser = async (req: Request, res: Response) => {
   const userId = parseInt(req.params.id);
 
   if (req.user.id !== userId && req.user.role !== 'admin') {
@@ -190,7 +190,7 @@ export const deleteUser = async (req: any, res: Response) => {
   }
 };
 
-export const listProfiles = async (req: any, res: Response) => {
+export const listProfiles = async (req: Request, res: Response) => {
   try {
     const result = await pool.query(`
       SELECT p.*, u.username, u.role 
@@ -203,7 +203,7 @@ export const listProfiles = async (req: any, res: Response) => {
   }
 };
 
-export const getUserProfile = async (req: any, res: Response) => {
+export const getUserProfile = async (req: Request, res: Response) => {
   const userId = parseInt(req.params.id);
 
   try {
@@ -236,7 +236,7 @@ export const getUserProfile = async (req: any, res: Response) => {
   }
 };
 
-export const updateUserProfile = async (req: any, res: Response) => {
+export const updateUserProfile = async (req: Request, res: Response) => {
   const userId = parseInt(req.params.id);
 
   // Security check: Only admin or the user themselves can edit
@@ -303,7 +303,7 @@ export const updateUserProfile = async (req: any, res: Response) => {
     } finally {
       client.release();
     }
-  } catch (err: any) {
+  } catch (err: unknown) {
     if (err instanceof z.ZodError) return res.status(400).json({ error: err.errors });
     if (err.code === '23503') return res.status(400).json({ error: 'Invalid tag ID' }); // FK violation
     console.error('Error updating profile:', err);

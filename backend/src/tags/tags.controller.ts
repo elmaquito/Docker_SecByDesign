@@ -26,7 +26,7 @@ export const createTag = async (req: Request, res: Response) => {
     const result = await pool.query(
       `INSERT INTO tags (type, name, meta, is_default_for_student_view, created_by) 
        VALUES ($1, $2, $3, $4, $5) RETURNING *`,
-      [type, name, meta || {}, is_default_for_student_view || false, (req as any).user.id]
+      [type, name, meta || {}, is_default_for_student_view || false, (req as Request & { user: { id: number } }).user.id]
     );
     res.status(201).json(result.rows[0]);
   } catch (err: any) {
