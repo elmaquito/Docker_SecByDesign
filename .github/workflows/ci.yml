@@ -223,10 +223,10 @@ jobs:
         with:
           node-version: 20
       - name: Install dependencies
+        run: |
           npm ci --prefix frontend
           npm ci --prefix backend
           npm ci --prefix tests/e2e
-          cd ../backend && npm ci
       - name: Install Playwright Browsers
         run: npx playwright install --with-deps chromium
         working-directory: tests/e2e
