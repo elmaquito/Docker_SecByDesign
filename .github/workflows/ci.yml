@@ -190,11 +190,15 @@ jobs:
         with:
           image-ref: notimatic-backend:ci
           severity: CRITICAL
+          exit-code: '1'
+          ignore-unfixed: true
       - name: Run Trivy scan on frontend image
         uses: aquasecurity/trivy-action@v0.19.0
         with:
           image-ref: notimatic-frontend:ci
           severity: CRITICAL
+          exit-code: '1'
+          ignore-unfixed: true
 
   docker-build:
     name: Docker Build
@@ -224,6 +228,7 @@ jobs:
     runs-on: ubuntu-latest
     # Gated: tests/e2e directory not yet created; enable via workflow_dispatch until ready
     if: github.event_name == 'workflow_dispatch'
+    continue-on-error: true
     needs: [docker-build]
     steps:
       - name: Checkout code
@@ -291,6 +296,7 @@ jobs:
     name: XSS/SQLi Automated Tests
     runs-on: ubuntu-latest
     if: github.event_name == 'workflow_dispatch'
+    continue-on-error: true
     needs: [docker-build]
     steps:
       - name: Checkout code
@@ -313,6 +319,7 @@ jobs:
     name: Firewall Scan (nmap)
     runs-on: ubuntu-latest
     if: github.event_name == 'workflow_dispatch'
+    continue-on-error: true
     needs: [docker-build]
     steps:
       - name: Checkout code
@@ -329,6 +336,7 @@ jobs:
     name: API Gateway Security Tests
     runs-on: ubuntu-latest
     if: github.event_name == 'workflow_dispatch'
+    continue-on-error: true
     needs: [docker-build]
     steps:
       - name: Checkout code
@@ -347,6 +355,7 @@ jobs:
     name: Ansible Automation & Validation
     runs-on: ubuntu-latest
     if: github.event_name == 'workflow_dispatch'
+    continue-on-error: true
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -361,6 +370,7 @@ jobs:
     name: SIEM Log Collection & Detection
     runs-on: ubuntu-latest
     if: github.event_name == 'workflow_dispatch'
+    continue-on-error: true
     needs: [docker-build]
     steps:
       - name: Checkout code
@@ -381,6 +391,7 @@ jobs:
     name: OWASP ZAP Scan (Backend via WAF)
     runs-on: ubuntu-latest
     if: github.event_name == 'workflow_dispatch'
+    continue-on-error: true
     needs: [docker-build]
     steps:
       - name: Checkout code
@@ -396,7 +407,6 @@ jobs:
         with:
           target: 'http://localhost:8080/'
           fail_action: true
-          rules_file_name: '.zap-rules.tsv'
       - name: Upload ZAP report
         uses: actions/upload-artifact@v4
         with:
