@@ -6,6 +6,11 @@ import { TokenService } from './token.service';
 import { loginSchema, passwordResetRequestSchema, passwordResetCompleteSchema } from './auth.schema';
 import { generateToken, hashToken, sendEmail } from '../common/utils';
 import { NODE_ENV } from '../config/env';
+import { User } from '../common/types';
+
+interface UserRequest extends Request {
+  user: User;
+}
 
 const tokenService = new TokenService();
 
@@ -70,11 +75,6 @@ export const login = async (req: Request, res: Response) => {
     res.status(500).json({ error: 'Internal error' });
   }
 };
-
-import { Request } from 'express';
-interface UserRequest extends Request {
-  user: { id: number; username: string; role: string };
-}
 
 export const logout = async (req: UserRequest, res: Response) => {
   try {

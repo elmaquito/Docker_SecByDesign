@@ -1,6 +1,6 @@
-import { Router, Request, Response } from 'express';
+import { Router, Request, Response, NextFunction } from 'express';
 import { Pool } from 'pg';
-import { Request, Response, NextFunction } from 'express';
+
 type AuthMiddleware = (req: Request, res: Response, next: NextFunction) => void;
 type AuthorizeMiddleware = (roles: string[]) => (req: Request, res: Response, next: NextFunction) => void;
 
