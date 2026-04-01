@@ -21,15 +21,18 @@ export const listTags = async (req: Request, res: Response) => {
 
 export const createTag = async (req: Request, res: Response) => {
   try {
+    if (!req.user) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
     const { type, name, meta, is_default_for_student_view } = TagSchema.parse(req.body);
 
     const result = await pool.query(
       `INSERT INTO tags (type, name, meta, is_default_for_student_view, created_by) 
        VALUES ($1, $2, $3, $4, $5) RETURNING *`,
-      [type, name, meta || {}, is_default_for_student_view || false, (req as Request & { user: { id: number } }).user.id]
+      [type, name, meta || {}, is_default_for_student_view || false, req.user.id]
     );
     res.status(201).json(result.rows[0]);
-  } catch (err: unknown) {
+  } catch (err: any) {
     if (err instanceof z.ZodError) return res.status(400).json({ error: err.errors });
     if (err.code === '23505') return res.status(409).json({ error: 'Tag already exists' });
     console.error('Error creating tag:', err);

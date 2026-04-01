@@ -7,7 +7,18 @@ import { pool } from '../config/database';
 import { TokenService } from '../auth/token.service';
 // import { Role } from './types';
 
+import { User } from './types';
+
 const tokenService = new TokenService();
+
+declare global {
+  // eslint-disable-next-line @typescript-eslint/no-namespace
+  namespace Express {
+    interface Request {
+      user?: User;
+    }
+  }
+}
 
 // 1. Authenticate (Verify JWT with auto-refresh)
 export const authenticate = async (req: Request, res: Response, next: NextFunction) => {
@@ -76,7 +87,7 @@ export const authenticate = async (req: Request, res: Response, next: NextFuncti
       req.user = { id: user.id, username: user.username, role: user.role };
       console.log(`[Auth] SUCCESS: Token auto-refreshed for user ${user.username} (${user.role})`);
       return next();
-    } catch (err) {
+    } catch (err: any) {
       console.error('[Auth] Refresh error:', err);
       return res.status(401).json({ error: 'Unauthorized: Session error' });
     }
@@ -149,7 +160,7 @@ export const sanitizeInput = (req: Request, res: Response, next: NextFunction) =
 };
 
 // 4. Global Error Handler
-export const errorHandler = (err: unknown, req: Request, res: Response, _next: NextFunction) => {
+export const errorHandler = (err: any, req: Request, res: Response, _next: NextFunction) => {
   console.error('[Error] Uncaught Exception:', err);
   
   // Handle Zod errors (if any leak here, usually they are caught in controller)

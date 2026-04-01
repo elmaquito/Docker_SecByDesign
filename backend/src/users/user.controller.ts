@@ -15,7 +15,7 @@ export const createUser = async (req: Request, res: Response) => {
       [username, hash, role]
     );
     res.status(201).json(result.rows[0]);
-  } catch (err: unknown) {
+  } catch (err: any) {
     if (err.code === '23505') return res.status(409).json({ error: 'Username already exists' });
     if (err instanceof z.ZodError) return res.status(400).json({ error: err.errors });
     res.status(500).json({ error: 'Internal error' });
@@ -33,6 +33,9 @@ export const listUsers = async (req: Request, res: Response) => {
 
 export const getAccount = async (req: Request, res: Response) => {
   try {
+    if (!req.user) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
     const result = await pool.query(
       'SELECT id, username, email, phone, role, created_at FROM users WHERE id = $1',
       [req.user.id]
@@ -51,6 +54,9 @@ export const getAccount = async (req: Request, res: Response) => {
 
 export const updateAccount = async (req: Request, res: Response) => {
   try {
+    if (!req.user) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
     // Students cannot edit their account
     if (req.user.role === 'student') {
       return res.status(403).json({ error: 'Students cannot edit their account information' });
@@ -117,7 +123,7 @@ export const setupAdmin = async (req: Request, res: Response) => {
       [username, hash]
     );
     res.json({ message: `Admin created (${username})` });
-  } catch (err: unknown) {
+  } catch (err: any) {
     console.error('Setup error:', err);
     res.status(500).json({ error: 'Internal error' });
   }
@@ -127,6 +133,9 @@ export const setupAdmin = async (req: Request, res: Response) => {
 export const exportData = async (req: Request, res: Response) => {
   const userId = parseInt(req.params.id);
   
+  if (!req.user) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
   if (req.user.id !== userId && req.user.role !== 'admin') {
     return res.status(403).json({ error: 'Forbidden' });
   }
@@ -164,6 +173,9 @@ export const exportData = async (req: Request, res: Response) => {
 };
 
 export const deleteUser = async (req: Request, res: Response) => {
+  if (!req.user) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
   const userId = parseInt(req.params.id);
 
   if (req.user.id !== userId && req.user.role !== 'admin') {
@@ -237,6 +249,9 @@ export const getUserProfile = async (req: Request, res: Response) => {
 };
 
 export const updateUserProfile = async (req: Request, res: Response) => {
+  if (!req.user) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
   const userId = parseInt(req.params.id);
 
   // Security check: Only admin or the user themselves can edit
@@ -303,7 +318,7 @@ export const updateUserProfile = async (req: Request, res: Response) => {
     } finally {
       client.release();
     }
-  } catch (err: unknown) {
+  } catch (err: any) {
     if (err instanceof z.ZodError) return res.status(400).json({ error: err.errors });
     if (err.code === '23503') return res.status(400).json({ error: 'Invalid tag ID' }); // FK violation
     console.error('Error updating profile:', err);

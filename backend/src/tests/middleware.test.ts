@@ -49,20 +49,20 @@ describe('Auth Middleware', () => {
 
         await authenticate(req as Request, res as Response, next);
         expect(next).toHaveBeenCalled();
-        expect((req as Request & { user: any }).user).toEqual({ id: 1, username: 'test', role: 'student' });
+        expect(req.user).toEqual({ id: 1, username: 'test', role: 'student' });
     });
   });
 
   describe('authorize', () => {
     it('should call next if user has allowed role', () => {
-      (req as Request & { user: any }).user = { role: 'admin' };
+      req.user = { id: 1, username: 'test', role: 'admin' };
       const middleware = authorize(['admin', 'technician']);
       middleware(req as Request, res as Response, next);
       expect(next).toHaveBeenCalled();
     });
 
     it('should return 403 if user does not have allowed role', () => {
-      (req as Request & { user: any }).user = { role: 'student' };
+      req.user = { id: 1, username: 'test', role: 'student' };
       const middleware = authorize(['admin', 'technician']);
       middleware(req as Request, res as Response, next);
       expect(res.status).toHaveBeenCalledWith(403);
