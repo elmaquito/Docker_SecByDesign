@@ -8,13 +8,21 @@ dotenv.config({ path: envPath });
 
 // Add validation function
 export function validateEnvironment() {
+  console.log('🔍 Validating environment variables...');
   const required = ['DB_HOST', 'DB_USER', 'DB_PASSWORD', 'DB_NAME', 'JWT_SECRET'];
   const missing = required.filter(key => !process.env[key]);
   
   if (missing.length > 0) {
     console.error('❌ Missing required environment variables:', missing);
+    console.error('Current ENV:', {
+      DB_HOST: process.env.DB_HOST,
+      DB_USER: process.env.DB_USER,
+      DB_NAME: process.env.DB_NAME,
+      JWT_SECRET: process.env.JWT_SECRET ? '[SET]' : '[NOT SET]'
+    });
     process.exit(1);
   }
+  console.log('✅ Environment variables validated');
 }
 
 export const PORT = process.env.PORT || 3000;

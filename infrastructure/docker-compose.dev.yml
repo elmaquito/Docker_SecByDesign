@@ -53,10 +53,18 @@ services:
       - JWT_SECRET=dev_jwt_secret_change_me
       - REFRESH_TOKEN_SECRET=dev_refresh_secret_change_me
       - PORT=3000
+      - CORS_ORIGINS=http://localhost:5173,http://127.0.0.1:5173
     depends_on:
-      - database
+      database:
+        condition: service_healthy
     networks:
       - net-dev
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:3000/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
     # labels:
     #   - "traefik.http.routers.api.rule=Host(`api.localhost`)"
 
@@ -72,6 +80,11 @@ services:
       - ../backend/init.sql:/docker-entrypoint-initdb.d/init.sql
     networks:
       - net-dev
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U user -d notimatic_dev"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
 networks:
   net-dev:

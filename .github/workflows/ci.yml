@@ -232,7 +232,6 @@ jobs:
   e2e-smoke:
     name: E2E Smoke (Playwright)
     runs-on: ubuntu-latest
-    # Gated: tests/e2e directory not yet created; enable via workflow_dispatch until ready
     if: github.event_name == 'workflow_dispatch'
     continue-on-error: true
     needs: [docker-build]
@@ -254,8 +253,25 @@ jobs:
       - name: Start services (docker-compose)
         run: |
           docker compose -f infrastructure/docker-compose.dev.yml up -d
+      - name: Show container logs for debugging
+        if: failure()
+        run: |
+          echo "=== Database logs ==="
+          docker compose -f infrastructure/docker-compose.dev.yml logs database
+          echo "=== Backend logs ==="
+          docker compose -f infrastructure/docker-compose.dev.yml logs backend
       - name: Wait for services to be ready
         run: |
+          echo "Waiting for database to be ready..."
+          for i in {1..30}; do
+            if docker compose -f infrastructure/docker-compose.dev.yml exec database pg_isready -U user -d notimatic_dev; then
+              echo "✅ Database is ready"
+              break
+            fi
+            echo "Waiting for database... ($i/30)"
+            sleep 2
+          done
+          
           echo "Waiting for backend to be ready..."
           for i in {1..60}; do
             if curl -sf http://localhost:3001/health; then
