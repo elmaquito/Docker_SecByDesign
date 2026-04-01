@@ -177,14 +177,17 @@ jobs:
   trivy-scan:
     name: Trivy image scan
     runs-on: ubuntu-latest
-    needs: [backend-test, frontend-test]
+    # Waits for both tests AND docker-build so it scans the exact built images
+    needs: [docker-build, backend-test, frontend-test]
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      - name: Build Docker images
+      - name: Download image artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: docker-images
+      - name: Load Docker images
         run: |
-          docker build -t notimatic-backend:ci -f infrastructure/Dockerfile.backend backend
-          docker build -t notimatic-frontend:ci -f infrastructure/Dockerfile.frontend frontend
+          docker load -i notimatic-backend.tar
+          docker load -i notimatic-frontend.tar
       - name: Run Trivy scan on backend image
         uses: aquasecurity/trivy-action@v0.19.0
         with:
@@ -203,25 +206,28 @@ jobs:
   docker-build:
     name: Docker Build
     runs-on: ubuntu-latest
-    needs: [trivy-scan]
+    # Runs early – parallel with tests – so images are ready for trivy-scan
+    # as soon as tests complete. Only requires lint to pass.
+    needs: [backend-lint, frontend-lint]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
       - name: Build multi-stage images
         run: |
-          docker build -t notimatic-backend:latest -f infrastructure/Dockerfile.backend backend
-          docker build -t notimatic-frontend:latest -f infrastructure/Dockerfile.frontend frontend
-      - name: Save images (optional)
+          docker build -t notimatic-backend:ci -f infrastructure/Dockerfile.backend backend
+          docker build -t notimatic-frontend:ci -f infrastructure/Dockerfile.frontend frontend
+      - name: Export images as tar archives
         run: |
-          docker save notimatic-backend:latest -o notimatic-backend.tar || true
-          docker save notimatic-frontend:latest -o notimatic-frontend.tar || true
-      - name: Upload images as artifacts (optional)
+          docker save notimatic-backend:ci -o notimatic-backend.tar
+          docker save notimatic-frontend:ci -o notimatic-frontend.tar
+      - name: Upload image artifacts
         uses: actions/upload-artifact@v4
         with:
           name: docker-images
           path: |
             notimatic-backend.tar
             notimatic-frontend.tar
+          retention-days: 1
 
   e2e-smoke:
     name: E2E Smoke (Playwright)
@@ -304,9 +310,8 @@ jobs:
   xss-sqli-tests:
     name: "Phase 2 – WAF: XSS/SQLi Blocking Tests"
     runs-on: ubuntu-latest
-    if: github.event_name == 'workflow_dispatch'
     continue-on-error: true
-    needs: [docker-build]
+    needs: [trivy-scan]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -359,9 +364,8 @@ jobs:
   firewall-scan:
     name: "Phase 3 – Network Isolation: Port Exposure Scan"
     runs-on: ubuntu-latest
-    if: github.event_name == 'workflow_dispatch'
     continue-on-error: true
-    needs: [docker-build]
+    needs: [trivy-scan]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -403,9 +407,8 @@ jobs:
   api-gw-tests:
     name: "Phase 4 – API Auth & Security Headers (Kong TBD)"
     runs-on: ubuntu-latest
-    if: github.event_name == 'workflow_dispatch'
     continue-on-error: true
-    needs: [docker-build]
+    needs: [trivy-scan]
     # NOTE: Kong API Gateway (Phase 4) not yet deployed.
     # Until then, this job validates auth enforcement and security headers
     # at the backend level via the WAF proxy.
@@ -460,9 +463,8 @@ jobs:
   ansible-automation:
     name: "Phase 6 – Ansible: Healthcheck & WAF Security Validation"
     runs-on: ubuntu-latest
-    if: github.event_name == 'workflow_dispatch'
     continue-on-error: true
-    needs: [docker-build]
+    needs: [trivy-scan]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -500,9 +502,8 @@ jobs:
   siem-log-check:
     name: "Phase 5 – Security Event Logging (Wazuh SIEM TBD)"
     runs-on: ubuntu-latest
-    if: github.event_name == 'workflow_dispatch'
     continue-on-error: true
-    needs: [docker-build]
+    needs: [trivy-scan]
     # NOTE: Wazuh SIEM (Phase 5) not yet deployed.
     # Until then, this job validates that the backend produces structured
     # security-event log entries — a prerequisite for SIEM log shipping.
@@ -555,9 +556,8 @@ jobs:
   zap-scan:
     name: "Phase 2/3 – OWASP ZAP Baseline Scan (via WAF)"
     runs-on: ubuntu-latest
-    if: github.event_name == 'workflow_dispatch'
     continue-on-error: true
-    needs: [docker-build]
+    needs: [trivy-scan]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
