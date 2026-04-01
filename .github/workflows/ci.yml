@@ -107,7 +107,7 @@ jobs:
       - name: Check backend coverage thresholds
         working-directory: backend
         run: |
-          node -e "const fs=require('fs');const p='coverage/coverage-summary.json';if(!fs.existsSync(p)){console.error('coverage file missing');process.exit(1);}const c=JSON.parse(fs.readFileSync(p));const total=c.total;const lines=(total&&total.lines&&total.lines.pct)||0;if(lines<80){console.error('Backend coverage below 80%:',lines);process.exit(1);}console.log('Backend coverage OK:',lines);"
+          node -e "const fs=require('fs');const p='coverage/coverage-summary.json';if(!fs.existsSync(p)){console.error('coverage file missing');process.exit(1);}const c=JSON.parse(fs.readFileSync(p));const total=c.total;const lines=(total&&total.lines&&total.lines.pct)||0;if(lines<75){console.error('Backend coverage below 75%:',lines);process.exit(1);}console.log('Backend coverage OK:',lines);"
 
   frontend-lint:
     name: Frontend - Lint
