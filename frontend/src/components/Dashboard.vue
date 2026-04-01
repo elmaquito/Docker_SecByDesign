@@ -14,6 +14,12 @@
       <button v-if="canManageUsers" @click="activeView = 'admin'" :class="{ active: activeView === 'admin' }" class="action-btn">
         👥 Gestion Utilisateurs
       </button>
+      <button v-if="canManageTags" @click="activeView = 'themes'" :class="{ active: activeView === 'themes' }" class="action-btn">
+        🏷️ Thèmes
+      </button>
+      <button v-if="canManageTags" @click="activeView = 'categories'" :class="{ active: activeView === 'categories' }" class="action-btn">
+        📂 Catégories
+      </button>
       <button @click="activeView = 'account'" :class="{ active: activeView === 'account' }" class="action-btn">
         ⚙️ Mon Compte
       </button>
@@ -136,6 +142,16 @@
       </div>
     </div>
 
+    <!-- Theme Manager View -->
+    <div v-else-if="activeView === 'themes' && canManageTags" class="view-container">
+      <ThemeManager :userRole="user.role" />
+    </div>
+
+    <!-- Category Manager View -->
+    <div v-else-if="activeView === 'categories' && canManageTags" class="view-container">
+      <CategoryManager :userRole="user.role" />
+    </div>
+
     <!-- Account Settings View -->
     <div v-else-if="activeView === 'account'" class="view-container">
       <AccountSettings :user="user" @close="activeView = 'feed'" @updated="activeView = 'feed'" />
@@ -157,6 +173,8 @@ import { storeToRefs } from 'pinia'
 import Feed from './Feed.vue'
 import AccountSettings from './AccountSettings.vue'
 import CreateNoteModal from './CreateNoteModal.vue'
+import ThemeManager from './ThemeManager.vue'
+import CategoryManager from './CategoryManager.vue'
 import { useNoteStore } from '../stores/note'
 import { useUserStore } from '../stores/user'
 import { useAuthStore } from '../stores/auth'
@@ -198,6 +216,7 @@ const myNotes = computed(() => {
 })
 
 const canManageUsers = computed(() => ['admin', 'technician'].includes(props.user.role))
+const canManageTags = computed(() => ['admin', 'teacher'].includes(props.user.role))
 const totalMyComments = computed(() => {
   return myNotes.value.reduce((sum, note) => sum + (note._comments?.length || 0), 0)
 })
@@ -828,5 +847,83 @@ onMounted(() => {
 .btn-icon:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+/* ─── Responsive ─────────────────────────────────────────────────── */
+
+@media (max-width: 768px) {
+  .main-dashboard {
+    padding: 0 0.5rem;
+  }
+
+  .quick-actions {
+    gap: 0.5rem;
+    padding: 0.75rem;
+  }
+
+  .action-btn {
+    padding: 8px 14px;
+    font-size: 0.85rem;
+  }
+
+  .user-profile-card {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+    padding: 1rem;
+  }
+
+  .profile-stats {
+    gap: 1.5rem;
+  }
+
+  .stat-value {
+    font-size: 1.5rem;
+  }
+
+  .note-header {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .note-actions {
+    align-self: flex-end;
+  }
+
+  .user-form {
+    flex-direction: column;
+  }
+
+  .form-input {
+    min-width: unset;
+  }
+
+  .users-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 480px) {
+  .quick-actions {
+    flex-direction: column;
+  }
+
+  .action-btn {
+    width: 100%;
+    text-align: center;
+  }
+
+  .profile-info {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .profile-stats {
+    gap: 1rem;
+  }
+
+  .comment-form {
+    flex-direction: column;
+  }
 }
 </style>

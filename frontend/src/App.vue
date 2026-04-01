@@ -214,4 +214,77 @@ main {
   font-size: 1.2rem;
   color: var(--text-color);
 }
+
+/* ─── Responsive ─────────────────────────────────────────────────── */
+
+/* Tablet: ≤ 768px */
+@media (max-width: 768px) {
+  .container {
+    padding: 12px;
+  }
+
+  header {
+    padding: 1rem;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+  }
+
+  header h1 {
+    font-size: 1.4rem;
+  }
+
+  .header-actions {
+    gap: 0.5rem;
+  }
+
+  .logout-btn {
+    padding: 8px 14px;
+    font-size: 0.85rem;
+  }
+
+  main {
+    padding: 1rem;
+  }
+}
+
+/* Mobile: ≤ 480px */
+@media (max-width: 480px) {
+  .container {
+    padding: 8px;
+  }
+
+  header {
+    padding: 0.75rem;
+    border-radius: 8px;
+    margin-bottom: 1rem;
+  }
+
+  header h1 {
+    font-size: 1.2rem;
+  }
+
+  .theme-toggle {
+    font-size: 1.2rem;
+  }
+
+  .logout-btn {
+    padding: 6px 12px;
+    font-size: 0.8rem;
+  }
+
+  main {
+    padding: 0.75rem;
+    border-radius: 8px;
+  }
+}
+
+/* Accessibility: reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
 </style>
