@@ -25,7 +25,7 @@
     - name: "Test XSS: <script> tag in query parameter is blocked"
       uri:
         # %3Cscript%3Ealert%281%29%3C%2Fscript%3E = <script>alert(1)</script>
-        url: "{{ waf_url }}/api/notes?search=%3Cscript%3Ealert%281%29%3C%2Fscript%3E"
+        url: "{{ waf_url }}/api/v1/notes?search=%3Cscript%3Ealert%281%29%3C%2Fscript%3E"
         method: GET
         status_code: 403
         timeout: 10
@@ -42,7 +42,7 @@
     - name: "Test SQLi: UNION SELECT in query parameter is blocked"
       uri:
         # %27%20UNION%20SELECT%201%2C2%2C3-- = ' UNION SELECT 1,2,3--
-        url: "{{ waf_url }}/api/notes?id=1%27%20UNION%20SELECT%201%2C2%2C3--"
+        url: "{{ waf_url }}/api/v1/notes?id=1%27%20UNION%20SELECT%201%2C2%2C3--"
         method: GET
         status_code: 403
         timeout: 10
@@ -52,7 +52,7 @@
     - name: "Test SQLi: OR 1=1 tautology is blocked"
       uri:
         # %27%20OR%20%271%27%3D%271 = ' OR '1'='1
-        url: "{{ waf_url }}/api/notes?id=1%27%20OR%20%271%27%3D%271"
+        url: "{{ waf_url }}/api/v1/notes?id=1%27%20OR%20%271%27%3D%271"
         method: GET
         status_code: 403
         timeout: 10
@@ -71,7 +71,7 @@
     - name: "Test path traversal: ../../../../etc/passwd is blocked"
       uri:
         # %2F..%2F..%2F..%2F..%2Fetc%2Fpasswd = /../../../../etc/passwd
-        url: "{{ waf_url }}/api/notes?file=..%2F..%2F..%2F..%2Fetc%2Fpasswd"
+        url: "{{ waf_url }}/api/v1/notes?file=..%2F..%2F..%2F..%2Fetc%2Fpasswd"
         method: GET
         status_code: 403
         timeout: 10

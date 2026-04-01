@@ -30,9 +30,9 @@
       debug:
         msg: "Health check passed: {{ health_result.json }}"
 
-    - name: Verify unauthenticated access to /api/notes is rejected (401)
+    - name: Verify unauthenticated access to /api/v1/notes is rejected (401)
       uri:
-        url: "{{ waf_url }}/api/notes"
+        url: "{{ waf_url }}/api/v1/notes"
         method: GET
         status_code: 401
         timeout: 10
@@ -41,12 +41,12 @@
     - name: Confirm auth enforcement
       assert:
         that: auth_check.status == 401
-        success_msg: "✅ Auth enforcement OK – /api/notes returns 401 without credentials"
-        fail_msg: "❌ Auth not enforced – /api/notes returned {{ auth_check.status }}"
+        success_msg: "✅ Auth enforcement OK – /api/v1/notes returns 401 without credentials"
+        fail_msg: "❌ Auth not enforced – /api/v1/notes returned {{ auth_check.status }}"
 
     - name: Verify invalid Bearer token is rejected (401)
       uri:
-        url: "{{ waf_url }}/api/notes"
+        url: "{{ waf_url }}/api/v1/notes"
         method: GET
         headers:
           Authorization: "Bearer invalid.token.value"

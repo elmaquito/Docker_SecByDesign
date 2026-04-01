@@ -45,18 +45,21 @@ services:
       retries: 10
 
   waf:
-    image: nginx:alpine
+    image: owasp/modsecurity-crs:nginx-alpine
     ports:
       - "8080:80"
-    volumes:
-      - ./config/nginx-waf.conf:/etc/nginx/nginx.conf:ro
+    environment:
+      BACKEND: "http://backend:3000"
+      PARANOIA: 1
+      ANOMALY_INBOUND: 5
+      ANOMALY_OUTBOUND: 4
     depends_on:
       backend:
         condition: service_healthy
     networks:
       - security-net
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost/health"]
+      test: ["CMD-SHELL", "curl -f http://localhost/healthz || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 5
