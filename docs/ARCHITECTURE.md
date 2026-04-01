@@ -1,136 +1,230 @@
-# Architecture Technique - NOTIMATIC MVP
+# NOTIMATIC — Architecture Technique
 
-## Date d'analyse
-**12 décembre 2024 — mis à jour le 1er avril 2026**
+> **Document** : Architecture technique et décisions de conception  
+> **Projet** : NOTIMATIC — Application de prise de notes sécurisée  
+> **Version du document** : 2.0  
+> **Date initiale** : 12 décembre 2024 · **Mise à jour** : 1er avril 2026  
+> **Auteur** : GitHub Copilot Agent
 
-## 1. Détection et Analyse du Backend Existant
+---
 
-### 1.1 Stack Détectée
+## Sommaire
 
-Après inspection du repository, la stack actuelle est:
+1. [Analyse du Projet](#1-analyse-du-projet)
+   - 1.1 [Stack Technique](#11-stack-technique)
+   - 1.2 [Structure des Fichiers](#12-structure-des-fichiers)
+   - 1.3 [Modèle de Données](#13-modèle-de-données--18-tables-migrations-001009)
+   - 1.4 [Surface API v1](#14-surface-api-v1-état-au-1er-avril-2026)
+2. [Décisions Techniques](#2-décisions-techniques-pour-le-mvp)
+   - 2.1 [Choix ORM / Database Layer](#21-choix-ormdatabase-layer)
+   - 2.2 [Choix Frontend](#22-choix-frontend)
+   - 2.3 [Architecture Cible](#23-architecture-cible)
+3. [Sécurité](#3-sécurité)
+4. [Infrastructure & Déploiement](#4-infrastructure--déploiement)
+5. [Stratégie de Migration](#5-stratégie-de-migration)
+6. [Plan d'Évolution](#6-plan-dévolution)
+
+---
+
+## 1. Analyse du Projet
+
+### 1.1 Stack Technique
+
+### 1.1 Stack Technique
 
 #### Backend
-- **Langage**: TypeScript (28.7% du codebase)
-- **Runtime**: Node.js
-- **Framework**: Express.js (v4.18.2)
-- **ORM/Database Client**: pg (node-postgres) v8.11.0 - client PostgreSQL natif
-- **Base de données**: PostgreSQL
-- **Sécurité**:
-  - helmet v7.0.0 (sécurisation headers HTTP)
-  - argon2 v0.30.3 (hashing de mots de passe)
-  - jsonwebtoken v9.0.0 (JWT)
-  - cookie-parser v1.4.6
-  - cors v2.8.5
-  - zod v3.21.4 (validation de schémas)
+
+| Composant | Technologie | Version |
+|-----------|-------------|---------|
+| Runtime | Node.js | 20.x LTS |
+| Framework | Express.js | 4.18.2 |
+| Langage | TypeScript | 5.x (strict) |
+| Base de données | PostgreSQL | 16 |
+| Client BDD | pg (node-postgres) | 8.11.0 |
+| Auth | JWT (jsonwebtoken) + Argon2 | 9.0.0 / 0.44.0 |
+| Validation | Zod | 3.21.4 |
+| Sécurité headers | Helmet | 7.0.0 |
+| Rate limiting | express-rate-limit | 8.3.1 |
+| Sanitization | validator | 13.x |
+| Tests | Jest + Supertest | 29.x |
 
 #### Frontend
-- **Framework**: Vue 3 (v3.3.4) (42.9% du codebase)
-- **Bundler**: Vite (v4.4.5)
-- **Langage**: TypeScript (Configuré v5+)
-- **État**: Pinia (v2+)
-- **Routing**: Vue Router (v4+)
-- **Tests**: Vitest (installé)
+
+| Composant | Technologie | Version |
+|-----------|-------------|---------|
+| Framework | Vue 3 | 3.3.4 |
+| Bundler | Vite | 4.4.5 |
+| Langage | TypeScript | 5.x |
+| State management | Pinia | 3.x |
+| Routing | Vue Router | 5.x |
+| Tests | Vitest + Vue Test Utils | 4.x |
+| Sanitization | DOMPurify | 3.x |
 
 #### Infrastructure
-- **Conteneurisation**: Docker & Docker Compose
-- **Reverse Proxy**: Traefik (mode production)
-- **Orchestration**: Docker Swarm (mode production)
-- **Scripts**: Shell (15%) et PowerShell (9.5%)
 
-### 1.2 Fichiers Clés Identifiés
+| Composant | Technologie |
+|-----------|-------------|
+| Conteneurisation | Docker + Docker Compose |
+| Reverse Proxy | Traefik (production) |
+| Orchestration | Docker Swarm (production) |
+| CI/CD | GitHub Actions |
+| Scan sécurité | Trivy + npm audit |
+
+### 1.2 Structure des Fichiers
 
 ```
 backend/
-├── src/main.ts          # Point d'entrée, routes API, middleware
-├── migrations/          # Migrations SQL (001-008)
-├── package.json         # Dépendances backend
-└── tsconfig.json        # Configuration TypeScript
+├── src/
+│   ├── main.ts              # Point d'entrée — middleware + montage routes
+│   ├── auth/                # auth.controller.ts · auth.routes.ts · auth.schema.ts · token.service.ts
+│   ├── users/               # user.controller.ts · user.routes.ts · user.schema.ts
+│   ├── notes/               # notes.controller.ts · notes.routes.ts · notes.schema.ts
+│   ├── tags/                # tags.controller.ts · tags.routes.ts
+│   ├── feed/                # feed.controller.ts · feed.routes.ts
+│   ├── metadata/            # metadata.controller.ts · metadata.routes.ts (themes, categories)
+│   ├── common/              # middleware.ts · audit.ts · types.ts · utils.ts
+│   └── config/              # database.ts · env.ts
+├── migrations/              # 001→009 scripts SQL
+├── tests/                   # Jest + Supertest
+├── Dockerfile
+├── migrate.sh / migrate.ps1
+└── package.json
 
 frontend/
 ├── src/
-│   ├── App.vue         # Composant racine (TS)
-│   ├── main.ts         # Point d'entrée (TS)
-│   ├── router/         # Configuration Vue Router
-│   ├── stores/         # Stores Pinia (Auth, Tags)
-│   └── components/
-│       ├── Login.vue   # Authentification
-│       └── Dashboard.vue # Dashboard principal
-├── package.json        # Dépendances frontend (TypeScript, Pinia, Router)
-└── vite.config.ts      # Configuration Vite (TS)
+│   ├── App.vue · main.ts    # Racine TS
+│   ├── components/          # AccountSettings, Dashboard, Feed, NoteCard, Reactions, …
+│   ├── composables/         # useTheme.ts
+│   ├── router/index.ts      # Vue Router 5 + navigation guards
+│   ├── stores/              # auth.ts · tag.ts (Pinia)
+│   ├── types/models.ts      # Interfaces TypeScript
+│   ├── utils/               # sanitize.ts (DOMPurify wrapper)
+│   └── tests/               # Vitest
+├── Dockerfile
+└── package.json
 
 infrastructure/
 ├── docker-compose.dev.yml
 ├── docker-compose.prod.yml
-└── docker-compose.debug.yml
+├── docker-compose.test.yml
+└── Dockerfile.backend
 ```
 
-### 1.3 Modèle de Données Actuel
+### 1.3 Modèle de Données — 18 Tables (migrations 001→009)
 
-Le schéma SQL a évolué via des migrations (`backend/migrations/`) pour inclure :
+| Domaine | Tables |
+|---------|--------|
+| **Identité** | `users`, `profiles`, `sessions`, `password_reset_tokens` |
+| **Contenu** | `notes`, `comments`, `reactions` |
+| **Tagging** | `tags`, `note_tags`, `user_tags` |
+| **Legacy ciblage** | `themes`, `note_themes`, `categories`, `note_categories`, `note_targets` |
+| **Conformité** | `audit_logs`, `gdpr_export_requests` |
+| **Infrastructure** | `schema_migrations` |
 
-- **Utilisateurs & Profils** (`users`, `profiles`, `password_reset_tokens`)
-- **Notes & Contenu** (`notes`, `comments`, `reactions`)
-- **Classification Unifiée** (`tags`, `note_tags`) remplacant Thèmes/Catégories
-  - Types: `classe`, `specialite`, `groupe`, `categorie`
-- **Sécurité & Audit** (`audit_logs`, `gdpr_export_requests`, `sessions`)
+**Système de Tags Unifiés** (migration 006) — remplace progressivement `themes`/`categories` :
 
 ```sql
--- Extrait du schéma Tags Unifiés
 CREATE TABLE tags (
-    id SERIAL PRIMARY KEY,
+    id   SERIAL PRIMARY KEY,
     type VARCHAR(20) CHECK (type IN ('classe', 'specialite', 'groupe', 'categorie')) NOT NULL,
     name VARCHAR(100) NOT NULL,
-    meta JSONB DEFAULT '{}',
-    is_default_for_student_view BOOLEAN DEFAULT FALSE
+    meta JSONB DEFAULT '{}',          -- couleur, icône, etc.
+    is_default_for_student_view BOOLEAN DEFAULT FALSE,
+    UNIQUE (type, name)
+);
+
+-- Association note ↔ tag (many-to-many)
+CREATE TABLE note_tags (
+    note_id INTEGER REFERENCES notes(id) ON DELETE CASCADE,
+    tag_id  INTEGER REFERENCES tags(id) ON DELETE CASCADE,
+    PRIMARY KEY (note_id, tag_id)
+);
+
+-- Tags affectés à un utilisateur (pour filtrage du feed)
+CREATE TABLE user_tags (
+    user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+    tag_id  INTEGER REFERENCES tags(id) ON DELETE CASCADE,
+    PRIMARY KEY (user_id, tag_id)
 );
 ```
-- Pas de table `note_targets` (assignation many-to-many)
-- Pas de table `note_categories`
-- Pas de tables d'audit/logs
-- Pas de mécanisme GDPR (export/purge)
 
-### 1.4 API Actuelle
+### 1.4 Surface API v1 (état au 1er avril 2026)
 
-Endpoints implémentés dans `backend/src/main.ts`:
+Toutes les routes sont montées sous le préfixe `/api/v1/` via `backend/src/main.ts`.
 
-**Endpoints implémentés dans les modules `backend/src/*/`** (architecture modulaire depuis v0.3.0) :
+#### Authentification (`auth/`)
 
-**Authentification** (`auth/`)
-- `POST /api/v1/auth/login`, `POST /api/v1/auth/logout`
-- `POST /api/v1/auth/password-reset/request`, `POST /api/v1/auth/password-reset/complete`
+| Méthode | Route | Accès | Description |
+|---------|-------|-------|-------------|
+| `POST` | `/auth/login` | Public | Connexion — émission de cookies JWT |
+| `POST` | `/auth/logout` | Authentifié | Révocation du cookie JWT |
+| `POST` | `/auth/refresh` | Public | Renouvellement du token d'accès via refresh token |
+| `POST` | `/auth/request-password-reset` | Public | Demande de réinitialisation (token SHA-256) |
+| `POST` | `/auth/reset-password` | Public | Finalisation de la réinitialisation |
 
-**Users** (`users/`)
-- `POST /api/v1/users`, `GET /api/v1/users`
-- `GET /api/v1/account`, `PATCH /api/v1/account`
-- `GET /api/v1/users/:id/export` (GDPR export)
-- `DELETE /api/v1/users/:id` (soft delete / anonymisation GDPR)
+#### Utilisateurs (`users/`)
 
-**Profiles**
-- `GET /api/v1/profiles/:userId`, `PUT /api/v1/profiles/:userId`, `POST /api/v1/profiles`
+| Méthode | Route | Accès | Description |
+|---------|-------|-------|-------------|
+| `POST` | `/users/setup` | Public (one-shot) | Création de l'admin initial |
+| `POST` | `/users` | admin, technician | Créer un utilisateur |
+| `GET` | `/users` | admin, technician, teacher | Lister les utilisateurs |
+| `GET` | `/users/me` | Authentifié | Obtenir les infos du compte courant |
+| `PUT` | `/users/me` | Authentifié | Modifier email, téléphone, mot de passe |
+| `GET` | `/users/:id/profile` | Authentifié | Obtenir le profil étendu (classe, promo, niveau, tags) |
+| `PUT` | `/users/:id/profile` | Soi-même ou admin | Mettre à jour le profil et les `user_tags` |
+| `GET` | `/users/:id/export` | Soi-même ou admin | Export RGPD — JSON de toutes les données |
+| `DELETE` | `/users/:id` | admin | Soft-delete + anonymisation RGPD |
 
-**Notes** (`notes/`)
-- `GET /api/v1/notes`, `POST /api/v1/notes`
-- `GET /api/v1/notes/:id`, `PATCH /api/v1/notes/:id`, `DELETE /api/v1/notes/:id`
-- `GET /api/v1/notes/:id/comments`, `POST /api/v1/notes/:id/comments`
-- `POST /api/v1/notes/:id/tags`, `GET /api/v1/notes/:id/tags`
-- `POST /api/v1/notes/:id/reactions`
+> **Note** : les `user_tags` (spécialités, groupes de l'utilisateur) sont gérés via `PUT /users/:id/profile` et non via des routes dédiées.
 
-**Tags** (`tags/`)
-- `GET /api/v1/tags`, `POST /api/v1/tags`
-- `PATCH /api/v1/tags/:id`, `DELETE /api/v1/tags/:id`
-- `GET /api/v1/users/:id/tags`, `POST /api/v1/users/:id/tags`
+#### Notes (`notes/`)
 
-**Feed** (`feed/`)
-- `GET /api/v1/feed` — filtrage ciblé par tags + user_tags + ownership
+| Méthode | Route | Accès | Description |
+|---------|-------|-------|-------------|
+| `GET` | `/notes` | Authentifié | Lister les notes (filtrage RBAC) |
+| `POST` | `/notes` | admin, teacher, student | Créer une note |
+| `GET` | `/notes/:id` | Authentifié | Détail d'une note |
+| `PATCH` | `/notes/:id` | Auteur ou admin | Modifier une note |
+| `DELETE` | `/notes/:id` | Auteur ou admin | Supprimer une note |
+| `GET` | `/notes/:id/tags` | Authentifié | Tags associés à la note |
+| `POST` | `/notes/:id/tags` | admin, teacher, student | Assigner des tags à la note |
+| `GET` | `/notes/:id/comments` | Authentifié | Commentaires de la note |
+| `POST` | `/notes/:id/comments` | Authentifié | Ajouter un commentaire |
+| `POST` | `/notes/:id/reactions` | Authentifié | Toggle réaction (add/remove/change) |
+| `GET` | `/notes/:id/reactions/me` | Authentifié | Réaction courante de l'utilisateur |
 
-**Metadata** (themes & categories)
-- `GET /api/v1/themes`, `POST /api/v1/themes`, `POST /api/v1/themes/apply`
-- `GET /api/v1/categories`, `POST /api/v1/categories`
+#### Tags (`tags/`)
 
-**Setup**
-- `POST /api/v1/setup` — créer admin initial (dev only)
+| Méthode | Route | Accès | Description |
+|---------|-------|-------|-------------|
+| `GET` | `/tags` | Authentifié | Lister tous les tags |
+| `POST` | `/tags` | admin, teacher, technician | Créer un tag |
+| `PATCH` | `/tags/:id` | admin, teacher, technician | Modifier un tag |
+| `DELETE` | `/tags/:id` | admin | Supprimer un tag |
 
-## 2. Décision Technique pour le MVP
+#### Feed (`feed/`)
+
+| Méthode | Route | Accès | Description |
+|---------|-------|-------|-------------|
+| `GET` | `/feed` | Authentifié | Feed ciblé avec pagination (`page`, `limit`, `tag`, `tags`, `search`) |
+
+#### Metadata — Thèmes & Catégories (lecture seule)
+
+| Méthode | Route | Accès | Description |
+|---------|-------|-------|-------------|
+| `GET` | `/themes` | Authentifié | Lister les thèmes |
+| `GET` | `/categories` | Authentifié | Lister les catégories |
+
+> **Note** : seules les routes GET sont exposées pour les thèmes et catégories. Les opérations d'écriture ne sont pas encore montées dans `main.ts`.
+
+#### Health Check
+
+| Méthode | Route | Accès | Description |
+|---------|-------|-------|-------------|
+| `GET` | `/health` | Public | Statut du service et timestamp BDD |
+
+## 2. Décisions Techniques pour le MVP
 
 ### 2.1 Choix ORM/Database Layer
 
@@ -204,244 +298,103 @@ Endpoints implémentés dans `backend/src/main.ts`:
 └─────────────────────────────────────────────────────────────┘
 ```
 
-### 2.4 Schéma de Base de Données Étendu
+## 3. Sécurité
 
-**Nouvelles tables à créer**:
+### Mesures Implémentées (v1.2.0)
 
-```sql
--- Profils utilisateurs (classe, promo, niveau)
-CREATE TABLE profiles (
-    id SERIAL PRIMARY KEY,
-    user_id INTEGER REFERENCES users(id) ON DELETE CASCADE UNIQUE,
-    classe VARCHAR(50),           -- ex: "Cyber1", "Dev2"
-    promotion VARCHAR(50),        -- ex: "2024-2025"
-    niveau VARCHAR(20),           -- ex: "Bac+1", "Bac+2", "Bac+3"
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-);
+| Mesure | Technologie | Détail |
+|--------|-------------|--------|
+| Authentification | JWT (HTTP-only cookies) | Access token (15min) + Refresh token (7j) |
+| Hashing mots de passe | Argon2 | Argon2id avec salt aléatoire |
+| Headers sécurité | Helmet | CSP, X-Frame-Options, HSTS, etc. |
+| Rate limiting | express-rate-limit | API: 100/15min · Auth: 15/1h · Comments: 10/1min |
+| Sanitization input | validator (backend) | Validation et nettoyage de toutes les entrées |
+| Sanitization output | DOMPurify (frontend) | Wrapper `sanitize.ts` pour tout contenu affiché |
+| Anti-injection SQL | pg paramétré | Requêtes `$1, $2, …` systématiques |
+| CORS | cors middleware | Origins strictement listées |
+| Audit logging | `AuditLogger` | Journal BDD de toutes les actions critiques |
+| Scan dépendances | npm audit | Niveau `critical` en CI |
+| Scan images | Trivy | Niveau `CRITICAL` sur images Docker |
+| RBAC | Middleware `authorize()` | 4 rôles: admin, technician, teacher, student |
 
--- Thèmes (créés par admins/teachers)
-CREATE TABLE themes (
-    id SERIAL PRIMARY KEY,
-    name VARCHAR(100) UNIQUE NOT NULL,
-    description TEXT,
-    created_by INTEGER REFERENCES users(id),
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-);
+### Reste à Implémenter
 
--- Catégories (pour ciblage)
-CREATE TABLE categories (
-    id SERIAL PRIMARY KEY,
-    name VARCHAR(100) UNIQUE NOT NULL,
-    description TEXT,
-    target_type VARCHAR(20) CHECK (target_type IN ('classe', 'promotion', 'niveau', 'all')),
-    target_value VARCHAR(50),    -- valeur spécifique ou NULL pour 'all'
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-);
+| Mesure | Priorité | Notes |
+|--------|----------|-------|
+| 2FA TOTP | 🔴 Haute | Google Authenticator / Authy |
+| Stockage secrets | 🟡 Moyenne | Vault ou AWS SSM (actuellement `.env`) |
+| Endpoint audit admin | 🔴 Haute | `GET /api/v1/audit` avec pagination |
 
--- Association Note-Thème (many-to-many)
-CREATE TABLE note_themes (
-    note_id INTEGER REFERENCES notes(id) ON DELETE CASCADE,
-    theme_id INTEGER REFERENCES themes(id) ON DELETE CASCADE,
-    PRIMARY KEY (note_id, theme_id)
-);
+## 4. Infrastructure & Déploiement
 
--- Association Note-Catégorie (ciblage)
-CREATE TABLE note_categories (
-    note_id INTEGER REFERENCES notes(id) ON DELETE CASCADE,
-    category_id INTEGER REFERENCES categories(id) ON DELETE CASCADE,
-    PRIMARY KEY (note_id, category_id)
-);
+### Environnements
 
--- Cibles de notes (assignation directe par user ou critères)
-CREATE TABLE note_targets (
-    id SERIAL PRIMARY KEY,
-    note_id INTEGER REFERENCES notes(id) ON DELETE CASCADE,
-    target_type VARCHAR(20) CHECK (target_type IN ('user', 'classe', 'promotion', 'niveau', 'all')),
-    target_value VARCHAR(50),    -- user_id, nom de classe, etc., ou NULL pour 'all'
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-);
+| Environnement | Fichier | Usage |
+|---------------|---------|-------|
+| Développement | `docker-compose.dev.yml` | Hot-reload, BDD locale |
+| Test | `docker-compose.test.yml` | CI, BDD isolée |
+| Production | `docker-compose.prod.yml` | Docker Swarm, Traefik, secrets |
 
--- Audit logs (actions critiques)
-CREATE TABLE audit_logs (
-    id SERIAL PRIMARY KEY,
-    user_id INTEGER REFERENCES users(id),
-    action VARCHAR(100) NOT NULL,  -- ex: 'NOTE_CREATED', 'USER_EXPORTED', 'NOTE_DELETED'
-    entity_type VARCHAR(50),       -- ex: 'note', 'user', 'comment'
-    entity_id INTEGER,
-    details JSONB,
-    ip_address VARCHAR(45),
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-);
+### Pipeline CI/CD (`.github/workflows/ci.yml`)
 
--- GDPR - Demandes d'export
-CREATE TABLE gdpr_export_requests (
-    id SERIAL PRIMARY KEY,
-    user_id INTEGER REFERENCES users(id),
-    status VARCHAR(20) DEFAULT 'pending',  -- pending, completed, failed
-    requested_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    completed_at TIMESTAMP WITH TIME ZONE,
-    export_data JSONB
-);
-
--- GDPR - Flag de suppression (soft delete)
-ALTER TABLE users ADD COLUMN deleted_at TIMESTAMP WITH TIME ZONE;
-ALTER TABLE users ADD COLUMN anonymized BOOLEAN DEFAULT FALSE;
+```
+push/PR
+  │
+  ├─► backend-lint      (ESLint, Node 18+20)
+  ├─► backend-test      (Jest + coverage ≥80%, Node 18+20, PostgreSQL 16)
+  ├─► frontend-lint     (echo stub, Node 20)
+  ├─► frontend-test     (Vitest + coverage ≥70%, Node 20)
+  ├─► npm-audit         (--audit-level=critical, backend+frontend)
+  │
+  ├─► trivy-scan        (CRITICAL, après backend+frontend-test)
+  ├─► docker-build      (multi-stage, après trivy-scan)
+  │
+  └─► e2e-smoke         (Playwright, main branch uniquement)
+      upload-reports    (artefacts couverture)
 ```
 
-## 3. Stack Technologique Finale
+## 5. Stratégie de Migration
 
-### Backend
-- **Runtime**: Node.js 20.x LTS
-- **Framework**: Express.js 4.18.2
-- **Langage**: TypeScript 5.1.0
-- **Database**: PostgreSQL 16
-- **Client DB**: pg 8.11.0
-- **Auth**: jsonwebtoken 9.0.0 (JWT)
-- **Hashing**: argon2 0.30.3
-- **Validation**: zod 3.21.4
-- **Sécurité**: helmet 7.0.0, cors 2.8.5
-- **Tests**: Jest ou Mocha + Supertest (à ajouter)
+### Migrations SQL Appliquées
 
-### Frontend
-- **Framework**: Vue 3.3.4
-- **Langage**: TypeScript 5.x (à ajouter)
-- **State Management**: Pinia 2.x (à ajouter)
-- **Router**: Vue Router 4.x (à ajouter)
-- **Build Tool**: Vite 4.4.5
-- **Tests**: Vitest (à ajouter)
-- **E2E Tests**: Playwright (à ajouter)
+| Migration | Description | Statut |
+|-----------|-------------|--------|
+| 001_add_profiles | Table `profiles` | ✅ |
+| 002_add_themes_categories | Tables `themes`, `categories`, `note_themes`, `note_categories` | ✅ |
+| 003_add_note_targets | Table `note_targets`, colonnes `notes.pinned/urgent` | ✅ |
+| 004_add_audit_gdpr | Tables `audit_logs`, `gdpr_export_requests` | ✅ |
+| 005_add_password_reset | Table `password_reset_tokens` | ✅ |
+| 006_add_unified_tags | Tables `tags`, `note_tags` (système unifié) | ✅ |
+| 007_add_reactions | Table `reactions` | ✅ |
+| 008_add_sessions | Table `sessions` (refresh tokens persistants) | ✅ |
+| 009_add_user_tags | Table `user_tags` (tags affectés à l'utilisateur) | ✅ |
 
-### Infrastructure
-- **Conteneurs**: Docker 24.x
-- **Orchestration**: Docker Compose / Swarm
-- **Reverse Proxy**: Traefik 2.x
-- **CI/CD**: GitHub Actions
-- **Security Scanning**: Trivy
+### Commandes
 
-## 4. Stratégie de Migration et Implémentation
+```bash
+# Linux / macOS
+bash backend/migrate.sh
 
-### Phase 1: Fondations (Semaine 1)
-1. Créer migrations SQL pour nouvelles tables
-2. Ajouter TypeScript et Pinia au frontend
-3. Créer les stores Pinia de base
-4. Mettre en place le workflow CI/CD
-
-### Phase 2: Backend API (Semaine 2)
-1. Implémenter endpoints Themes
-2. Implémenter endpoints Categories
-3. Implémenter endpoint Feed étendu avec filtrage
-4. Ajouter middleware rate limiting et sanitization
-5. Implémenter logging/audit
-
-### Phase 3: Frontend MVP (Semaine 3)
-1. Créer composants Feed (FeedList, NoteCard)
-2. Créer formulaire création note (teacher)
-3. Intégrer sélection thèmes/catégories
-4. Implémenter filtres de feed
-
-### Phase 4: GDPR & Sécurité (Semaine 4)
-1. Endpoints GDPR (export/purge)
-2. Tests de sécurité
-3. Documentation GDPR
-4. Scan Trivy et dépendances
-
-### Phase 5: Tests & Finalisation (Semaine 5)
-1. Tests unitaires backend
-2. Tests unitaires frontend
-3. Tests E2E Playwright
-4. Documentation finale
-
-## 5. Sécurité by Design
-
-### Mesures Existantes
-✅ JWT avec HTTP-only cookies
-✅ Argon2 pour hashing
-✅ Helmet pour headers sécurisés
-✅ CORS configuré
-✅ Requêtes SQL paramétrées
-✅ Validation Zod
-
-### Mesures à Ajouter
-- [ ] Rate limiting (express-rate-limit)
-- [ ] Sanitization XSS (DOMPurify côté front, validator côté back)
-- [ ] CSRF protection (csurf)
-- [ ] Audit logging
-- [ ] Scan dépendances (npm audit, Trivy)
-- [ ] Content Security Policy (CSP)
-
-## 6. Conformité RGPD
-
-### Principes
-1. **Minimisation**: Collecter seulement les données nécessaires
-2. **Consentement**: Informer les utilisateurs
-3. **Droit d'accès**: Endpoint d'export
-4. **Droit à l'oubli**: Endpoint de suppression/anonymisation
-5. **Sécurité**: Chiffrement, audit logs
-6. **Rétention**: Politique de conservation (à définir)
-
-### Implémentation
-- Endpoints `/api/users/:id/export` et `/api/users/:id`
-- Soft delete avec flag `deleted_at`
-- Anonymisation optionnelle
-- Logs d'audit pour actions GDPR
-- Documentation des traitements
-
-## 7. CI/CD Pipeline
-
-### Workflow GitHub Actions
-
-```yaml
-name: CI/CD Pipeline
-
-on: [push, pull_request]
-
-jobs:
-  lint-backend:
-    - npm run lint
-  
-  test-backend:
-    - npm run test
-  
-  lint-frontend:
-    - npm run lint
-  
-  test-frontend:
-    - npm run test:unit
-  
-  e2e:
-    - npm run test:e2e
-  
-  build:
-    - docker build backend
-    - docker build frontend
-  
-  security:
-    - npm audit
-    - trivy scan
-  
-  deploy:
-    - (optionnel) push to registry
+# Windows PowerShell
+.\backend\migrate.ps1
 ```
 
-## 8. Conclusion
+## 6. Plan d'Évolution
 
-**Stack finale retenue**: 
-- Backend: **Express + TypeScript + PostgreSQL (pg client natif)**
-- Frontend: **Vue 3 + TypeScript + Pinia**
-- Infrastructure: **Docker + GitHub Actions + Traefik**
+### Court terme (v1.x)
+- 2FA TOTP (obligatoire admin)
+- Tests E2E Playwright complets
+- Couverture ≥80% backend / ≥70% frontend
+- ESLint côté frontend
+- ThemeManager.vue / CategoryManager.vue
 
-Cette stack est cohérente avec l'existant, moderne, sécurisée et parfaitement adaptée aux exigences du MVP.
-
-**Prochaines étapes**:
-1. Créer les migrations SQL
-2. Scaffolder le frontend TypeScript/Pinia
-3. Implémenter les endpoints manquants
-4. Mettre en place CI/CD
-5. Créer les issues GitHub avec roadmap détaillée
+### Moyen terme (v1.1→1.3)
+- Notifications temps réel (WebSocket / SSE)
+- Recherche full-text PostgreSQL (`tsvector`)
+- Analytics engagement
 
 ---
 
-**Auteur**: GitHub Copilot Agent  
-**Date**: 12 décembre 2024 — mis à jour le 1er avril 2026  
-**Version**: 2.0
+**Auteur** : GitHub Copilot Agent  
+**Date initiale** : 12 décembre 2024 · **Mise à jour** : 1er avril 2026  
+**Version** : 2.0

@@ -1,123 +1,167 @@
-# Notimatic - Secure by Design Project
+# NOTIMATIC — Secure by Design
+
+> Application de prise de notes sécurisée avec feed d'actualités ciblé, commentaires et conformité RGPD.  
+> Conçue pour les établissements d'enseignement (rôles : admin, technician, teacher, student).
 
 ![CI](https://github.com/elmaquito/NOTIMATIC/actions/workflows/ci.yml/badge.svg)
 
-Bienvenue dans le projet **Notimatic**. Ce dépôt contient l'architecture et l'implémentation de référence pour une application de prise de notes sécurisée avec **feed d'actualités, commentaires, assignation par thèmes et catégories ciblées**.
+---
+
+## Sommaire
+
+1. [État du Projet](#-état-du-projet)
+2. [Fonctionnalités](#-fonctionnalités)
+3. [Démarrage Rapide](#-démarrage-rapide)
+4. [Configuration](#-configuration)
+5. [Architecture & Stack](#️-architecture--stack)
+6. [Base de Données](#base-de-données)
+7. [Roadmap MVP](#-roadmap-mvp)
+8. [Sécurité & RGPD](#-sécurité--rgpd)
+9. [Tests & CI/CD](#-tests--cicd)
+10. [Documentation](#-documentation)
+11. [Contribution](#-contribution)
+12. [Support](#-support)
+
+---
 
 ## 📋 État du Projet
 
 🎯 **Version**: v1.2.0
 ✅ **Backend**: Node.js/Express/TypeScript (Auth, Unified Tags, Profiles, Feed, GDPR, Audit)
 ✅ **Frontend**: Vue 3 + TypeScript + Pinia + Vue Router (Migration complète)
-✅ **CI/CD**: GitHub Actions strict — lint, tests, couverture, Trivy, Docker Build (Node 18 & 20)
+✅ **CI/CD**: GitHub Actions strict — lint, tests, couverture, Trivy, Docker Build backend (Node 18 & 20) + frontend (Node 20)
 ✅ **Sécurité**: Rate limiting, Sanitization XSS, Audit logs, Conformité RGPD
 
-## ✨ Fonctionnalités Clés
-- **Authentification Sécurisée**: JWT avec cookies HTTP-only, rôles RBAC
-- **Feed Personnalisé**: Filtrage par Tags Unifiés (Classe, Spécialité, Groupe, Catégorie)
-- **Expérience Utilisateur**: Mode Sombre/Clair, Interface Responsive
-- **Gestion de Contenu**: Création riche, commentaires, modération basique
-- **Conformité**: Export de données RGPD, suppression de compte
+## ✨ Fonctionnalités
+
+| Domaine | Fonctionnalité | Statut |
+|---------|---------------|--------|
+| **Authentification** | JWT HTTP-only cookies, RBAC 4 rôles, refresh token | ✅ |
+| **Feed ciblé** | Filtrage par Tags Unifiés + `note_targets` | ✅ |
+| **Gestion de contenu** | Notes (CRUD), commentaires, réactions | ✅ |
+| **Tags Unifiés** | `classe`, `specialite`, `groupe`, `categorie` | ✅ |
+| **Profils utilisateurs** | Classe, promotion, niveau, photo | ✅ |
+| **Sécurité** | Rate limiting, Helmet CSP, Sanitization XSS | ✅ |
+| **RGPD** | Export JSON, soft-delete, anonymisation | ✅ |
+| **Audit** | Journal des actions critiques | ✅ |
+| **UI/UX** | Dark/Light mode, Responsive, Loader | ✅ |
+| **CI/CD** | GitHub Actions — lint, tests, Trivy, Docker | ✅ |
+| **2FA TOTP** | Authentification forte pour admins | 🔄 |
+| **Tests E2E** | Playwright smoke + flows | 🔄 |
 
 ## 🚀 Démarrage Rapide
 
 ### Prérequis
-- Docker & Docker Compose installés
-- Node.js 20.x (optionnel, pour le développement local hors Docker)
-- PostgreSQL 16 (si développement local)
 
-### 1. Structure du Projet
-- `docs/` : Documentation complète (architecture, roadmap, wireframes, GDPR)
-- `backend/` : API Node.js/Express/TypeScript + migrations SQL
-- `frontend/` : Application Vue.js 3 + TypeScript + Pinia + Vue Router
-- `infrastructure/` : Docker Compose et configuration
-- `.github/workflows/` : Pipeline CI/CD
+| Outil | Version minimale | Usage |
+|-------|-----------------|-------|
+| Docker + Docker Compose | 24.x | Environnement d'exécution |
+| Node.js | 18.x LTS | Développement local |
+| PostgreSQL | 16 | Base de données (si hors Docker) |
 
-### 2. Appliquer les Migrations
+### Structure du Projet
 
-Avant de lancer l'application, appliquer les migrations SQL:
+```
+NOTIMATIC/
+├── backend/          # API Node.js/Express/TypeScript
+│   ├── src/          # Code source (modules: auth, users, notes, tags, feed, …)
+│   ├── migrations/   # Migrations SQL numérotées 001→009
+│   └── Dockerfile
+├── frontend/         # Application Vue 3 + TypeScript + Pinia
+│   ├── src/          # Composants, stores, routes, types
+│   └── Dockerfile
+├── infrastructure/   # Docker Compose (dev, prod, test)
+├── docs/             # Documentation complète
+└── .github/          # Workflows CI/CD
+```
+
+### Étape 1 — Cloner et appliquer les migrations
 
 ```bash
+git clone https://github.com/elmaquito/NOTIMATIC.git
+cd NOTIMATIC
+
+# Linux / macOS
+bash backend/migrate.sh
+
+# Windows PowerShell
 .\backend\migrate.ps1
 ```
 
-Cela créera les tables nécessaires:
-- `profiles` - Profils utilisateurs (classe, promo, niveau)
-- `themes` - Thématiques pour organisation des notes
-- `categories` - Catégories pour ciblage
-- `note_targets` - Assignation de notes
-- `audit_logs` - Logs d'audit
-- `gdpr_export_requests` - Conformité RGPD
-- Et plus...
-
-### 3. Lancer l'environnement de Développement
-
-Mode développement avec hot-reloading:
+### Étape 2 — Lancer en développement
 
 ```bash
+# Mode Docker (recommandé) avec hot-reloading
 docker-compose -f infrastructure/docker-compose.dev.yml up --build
 ```
 
-Ou en mode local (sans Docker):
+Ou sans Docker :
 
 ```bash
-# Terminal 1: Backend
-cd backend
-npm install
-npm run build
-npm run start:dev
+# Terminal 1 : Backend
+cd backend && npm install && npm run start:dev
 
-# Terminal 2: Frontend
-cd frontend
-npm install
-npm run dev
+# Terminal 2 : Frontend
+cd frontend && npm install && npm run dev
 ```
 
-**URLs**:
-- **Frontend**: http://localhost:5173 (or http://127.0.0.1:5173)
-- **Backend API**: http://localhost:3001 (mapped from internal port 3000)
-- **Base de données**: localhost:5432 (User: `user`, Pass: `dev_secret_password`)
+**URLs d'accès** :
 
-**Note**: The application automatically detects whether you access it via `localhost` or `127.0.0.1` and adjusts API calls accordingly to ensure authentication cookies work correctly. You can override this behavior using environment variables (see `.env.example` files).
+| Service | URL | Notes |
+|---------|-----|-------|
+| Frontend | http://localhost:5173 | Vite dev server |
+| Backend API | http://localhost:3001 | Port mappé depuis 3000 |
+| Base de données | localhost:5432 | User: `user` / Pass: `dev_secret_password` |
 
-### 4. Configuration (Optionnel)
+### Étape 3 — Compte initial
 
-Les variables d'environnement peuvent être configurées pour personnaliser l'application:
-
-**Frontend** (`frontend/.env`):
 ```bash
-# Option 1: Full API URL
+curl -X POST http://localhost:3001/api/v1/users/setup \
+  -H "Content-Type: application/json" \
+  -d '{"username":"admin","password":"AdminPass123!"}'
+```
+
+> ⚠️ La route `/users/setup` est désactivée automatiquement dès qu'un utilisateur admin existe.
+
+---
+
+## ⚙️ Configuration
+
+### Variables d'environnement Backend (`backend/.env`)
+
+| Variable | Valeur par défaut | Description |
+|----------|------------------|-------------|
+| `PORT` | `3000` | Port d'écoute interne |
+| `DB_HOST` | `database` | Hôte PostgreSQL |
+| `DB_USER` | `user` | Utilisateur BDD |
+| `DB_PASSWORD` | *(requis)* | Mot de passe BDD |
+| `DB_NAME` | `notimatic_dev` | Nom de la BDD |
+| `JWT_SECRET` | *(requis)* | Secret de signature JWT access token |
+| `REFRESH_TOKEN_SECRET` | *(requis)* | Secret refresh token |
+| `CORS_ORIGINS` | `http://localhost:5173` | Origins CORS (virgule-séparées) |
+| `NODE_ENV` | `development` | `development` \| `production` \| `test` |
+
+### Variables d'environnement Frontend (`frontend/.env`)
+
+```bash
+# Option 1 : URL complète
 VITE_API_URL=http://localhost:3001
 
-# Option 2: Individual components
+# Option 2 : Composants individuels
 VITE_API_HOST=localhost
 VITE_API_PORT=3001
 ```
 
-**Backend** (`backend/.env`):
-```bash
-PORT=3000
-DB_HOST=database
-DB_USER=user
-DB_PASSWORD=dev_secret_password
-DB_NAME=notimatic_dev
-JWT_SECRET=your_secure_secret
-CORS_ORIGINS=http://localhost:5173,http://127.0.0.1:5173
-```
-
-Voir les fichiers `.env.example` pour la documentation complète.
-
-### 5. Simuler la Production
-
-Mode production avec Docker Swarm:
+### Mode Production — Docker Swarm
 
 ```bash
-# 1. Initialiser Swarm
+# 1. Initialiser le Swarm
 docker swarm init
 
-# 2. Créer les secrets
-printf "super_secure_db_password" | docker secret create db_password -
-printf "super_secure_jwt_secret" | docker secret create jwt_secret -
+# 2. Créer les secrets chiffrés
+printf "your_db_password"  | docker secret create db_password -
+printf "your_jwt_secret"   | docker secret create jwt_secret -
+printf "your_refresh_secret" | docker secret create refresh_secret -
 
 # 3. Déployer la stack
 docker stack deploy -c infrastructure/docker-compose.prod.yml notimatic
@@ -125,60 +169,124 @@ docker stack deploy -c infrastructure/docker-compose.prod.yml notimatic
 
 ## 📚 Documentation
 
-### Documentation Principale
+### Référence Technique
 
-- **[ARCHITECTURE.md](docs/ARCHITECTURE.md)** - Analyse technique complète, stack retenue, décisions
-- **[ROADMAP.md](docs/ROADMAP.md)** - Roadmap par version avec timeline (6-8 semaines)
-- **[wireframes.md](docs/wireframes.md)** - Wireframes UX détaillés (7 écrans)
-- **[GDPR.md](docs/GDPR.md)** - Conformité RGPD (données, droits, procédures)
-- **[GITHUB_ISSUES.md](docs/GITHUB_ISSUES.md)** - 18 issues détaillées à créer
-- **[RAPPORT_FINAL.md](docs/RAPPORT_FINAL.md)** - Rapport complet du travail accompli
+| Document | Contenu |
+|----------|---------|
+| [ARCHITECTURE.md](docs/ARCHITECTURE.md) | Stack, décisions, API surface complète, schéma BDD |
+| [API.md](docs/API.md) | Documentation de tous les endpoints HTTP |
+| [ROADMAP.md](docs/ROADMAP.md) | Historique des versions livrées + reste à faire |
+| [RELEASE_NOTES.md](docs/RELEASE_NOTES.md) | Changelog détaillé par version |
+| [Migrations SQL](backend/migrations/README.md) | Guide des 9 migrations (001→009) |
+| [CI/CD Pipeline](.github/workflows/ci.yml) | Configuration GitHub Actions |
 
-### Documentation Technique
+### Sécurité & Conformité
 
-- **[Migrations SQL](backend/migrations/README.md)** - Guide des migrations
-- **[CI/CD Pipeline](.github/workflows/ci.yml)** - Configuration GitHub Actions
+| Document | Contenu |
+|----------|---------|
+| [GDPR.md](docs/GDPR.md) | Conformité RGPD : données, droits, procédures |
+| [SECURITY_ARCHITECTURE.md](docs/SECURITY_ARCHITECTURE.md) | Architecture de sécurité |
+| [THREAT_MODEL_AND_PLAYBOOKS.md](docs/THREAT_MODEL_AND_PLAYBOOKS.md) | Modèle de menaces + playbooks |
+| [ZERO_TRUST.md](docs/ZERO_TRUST.md) | Implémentation Zero Trust |
+| [SECURITY_DEPLOYMENT_GUIDE.md](docs/SECURITY_DEPLOYMENT_GUIDE.md) | Guide de déploiement sécurisé |
 
-### Documentation Existante
+### Guides Utilisateur
 
-- **[Architecture Proposal](docs/PROPOSAL_ARCHITECTURE.md)** - Proposition initiale
-- **[Threat Model](docs/THREAT_MODEL_AND_PLAYBOOKS.md)** - Modèle de menaces et playbooks
+| Document | Contenu |
+|----------|---------|
+| [USER_GUIDE.md](docs/USER_GUIDE.md) | Guide utilisateur final (reset mot de passe, compte) |
+| [wireframes.md](docs/wireframes.md) | Wireframes UX détaillés (7 écrans ASCII) |
+| [GITHUB_ISSUES.md](docs/GITHUB_ISSUES.md) | 18 issues GitHub à créer (7 epics) |
 
-## 🏗️ Architecture
+## 🏗️ Architecture & Stack
 
 ### Stack Technique
 
-**Backend**:
-- Node.js 20.x + Express.js 4.18
-- TypeScript 5.1
-- PostgreSQL 16 (client natif `pg`)
-- JWT avec HTTP-only cookies
-- Argon2 pour hashing
-- Zod pour validation
+| Couche | Technologie | Version |
+|--------|-------------|---------|
+| **Runtime** | Node.js | 20.x LTS |
+| **Framework API** | Express.js | 4.18 |
+| **Langage** | TypeScript | 5.x (strict) |
+| **Base de données** | PostgreSQL | 16 |
+| **Client BDD** | pg (node-postgres) | 8.11 |
+| **Auth** | JWT (jsonwebtoken) + Argon2 | — |
+| **Validation** | Zod | 3.21 |
+| **Sécurité** | Helmet, express-rate-limit, validator | — |
+| **Frontend framework** | Vue 3 | 3.3.4 |
+| **Bundler** | Vite | 4.4.5 |
+| **State management** | Pinia | 3.x |
+| **Routing** | Vue Router | 5.x |
+| **Tests backend** | Jest + Supertest | 29.x |
+| **Tests frontend** | Vitest + Vue Test Utils | 4.x |
+| **Conteneurisation** | Docker + Docker Compose | — |
+| **Reverse proxy** | Traefik | — |
+| **CI/CD** | GitHub Actions | — |
+| **Scan sécurité** | Trivy, npm audit | — |
 
-**Frontend**:
-- Vue 3.3.4 + TypeScript 5.x
-- Vite 4.4.5
-- Pinia (state management)
-- Vue Router 4 (navigation guards)
-- Vitest (tests unitaires)
+### Diagramme d'Architecture
 
-**Infrastructure**:
-- Docker + Docker Compose
-- Traefik (reverse proxy)
-- GitHub Actions (CI/CD)
-- Trivy (scan sécurité)
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                        CLIENT                                   │
+│  Vue 3 + TypeScript + Pinia + Vue Router 5                      │
+│  ┌──────────────┐  ┌────────────────┐  ┌───────────────────┐   │
+│  │  Components  │  │  Pinia Stores  │  │   Vue Router 5    │   │
+│  │ Dashboard    │  │  auth.ts       │  │  + Auth Guards    │   │
+│  │ Feed.vue     │  │  tag.ts        │  └───────────────────┘   │
+│  │ NoteCard.vue │  └────────────────┘                          │
+│  └──────────────┘                                              │
+└─────────────────────────────────────────────────────────────────┘
+               │ HTTP/JSON (JWT cookie)
+               ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                  TRAEFIK (reverse proxy TLS)                    │
+└─────────────────────────────────────────────────────────────────┘
+               │
+               ▼
+┌─────────────────────────────────────────────────────────────────┐
+│            BACKEND — Node.js/Express/TypeScript                 │
+│  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌───────────────────┐  │
+│  │  auth/   │ │  users/  │ │  notes/  │ │  feed/ + tags/    │  │
+│  │  routes  │ │  routes  │ │  routes  │ │  routes           │  │
+│  └──────────┘ └──────────┘ └──────────┘ └───────────────────┘  │
+│  Middleware: Helmet · CORS · Rate Limit · Sanitize · Audit      │
+└─────────────────────────────────────────────────────────────────┘
+               │
+               ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                 PostgreSQL 16 (18 tables)                       │
+└─────────────────────────────────────────────────────────────────┘
+```
 
 ### Base de Données
 
-Schéma étendu avec 13+ tables :
-- `users`, `profiles` — Utilisateurs et profils
-- `notes`, `comments`, `reactions` — Contenu
-- `tags`, `note_tags` — Tags Unifiés (classe, spécialité, groupe, catégorie)
-- `user_tags` — Tags assignés aux utilisateurs (groupes, spécialités)
-- `audit_logs`, `gdpr_export_requests` — Audit et GDPR
-- `sessions`, `password_reset_tokens` — Sécurité des sessions
-- `schema_migrations` — Tracking migrations (001→009)
+Schéma complet — 18 tables réparties en 4 domaines :
+
+**Identité & Authentification**
+- `users` — Comptes (username, rôle RBAC, soft-delete)
+- `profiles` — Données de profil étendues (classe, promotion, niveau)
+- `sessions` — Refresh tokens persistants
+- `password_reset_tokens` — Tokens SHA-256 one-time pour réinitialisation
+
+**Contenu**
+- `notes` — Notes (titre, contenu, pinned, urgent, view_count)
+- `comments` — Commentaires sur les notes
+- `reactions` — Réactions (toggle par utilisateur)
+
+**Tagging & Ciblage**
+- `tags` — Tags Unifiés : `classe`, `specialite`, `groupe`, `categorie`
+- `note_tags` — Association note ↔ tag (many-to-many)
+- `user_tags` — Tags affectés à un utilisateur (pour le feed ciblé)
+- `themes` — Thèmes UI (modèle historique, coexistant avec Tags Unifiés)
+- `note_themes` — Association note ↔ thème (legacy)
+- `categories` — Catégories de ciblage (`classe`, `promotion`, `niveau`, `all`)
+- `note_categories` — Association note ↔ catégorie (legacy)
+- `note_targets` — Règles de ciblage fin par note (user, classe, promotion, niveau, all)
+
+**Conformité & Audit**
+- `audit_logs` — Journal immuable des actions critiques
+- `gdpr_export_requests` — Suivi des demandes d'export RGPD
+- `schema_migrations` — Versioning des migrations (001→009)
 
 Voir [ARCHITECTURE.md](docs/ARCHITECTURE.md) pour le schéma complet.
 
@@ -210,15 +318,15 @@ Dark/Light mode, Loader, Responsive, wireframes ASCII.
 ### ✅ v1.0.0 — Production Ready
 Docker Swarm, Traefik, secrets, documentation complète.
 
-### 🔄 Reste à faire (post-MVP)
+### 🔄 Reste à faire (post-v1.0.0)
 - **Sécurité avancée**: 2FA TOTP, interface QR Code, vue "Activités récentes"
 - **Audit admin**: endpoint `GET /api/v1/audit`, couverture complète des actions sensibles
 - **Tests E2E**: Playwright (smoke, teacher flow, student flow, GDPR flow)
 - **Couverture**: atteindre 80% backend / 70% frontend dans le CI
-- **v1.1.0**: Notifications temps réel (WebSocket)
-- **v1.2.0**: Recherche full-text PostgreSQL
-- **v1.3.0**: Collaboration (mentions, réactions)
-- **v1.4.0**: Analytics dashboard
+- **Notifications** (v1.x): Temps réel WebSocket + e-mail
+- **Recherche full-text** (v1.x): PostgreSQL FTS sur les notes
+- **Collaboration** (v1.x): Mentions @username, réactions enrichies
+- **Analytics** (v1.x): Tableaux de bord engagement
 
 Voir [ROADMAP.md](docs/ROADMAP.md) pour le détail complet.
 
@@ -256,84 +364,91 @@ Voir [ROADMAP.md](docs/ROADMAP.md) pour le détail complet.
 - Exports GDPR : 3 mois
 - Soft delete puis anonymisation à 30 jours
 
-## 🧪 Tests
+## 🧪 Tests & CI/CD
 
-### Tests Unitaires
-```bash
-# Backend
-cd backend
-npm test
-
-# Frontend
-cd frontend
-npm test
-```
-
-### Tests E2E
-```bash
-npx playwright test
-```
-
-### CI/CD
-
-Le pipeline GitHub Actions s'exécute automatiquement sur chaque push:
-- Lint backend & frontend
-- Tests unitaires
-- Build TypeScript
-- Scan sécurité (Trivy, npm audit)
-- Tests E2E (sur PR)
-- Build Docker images
-
-## 📝 Créer les Issues GitHub
-
-Les issues sont documentées dans [docs/GITHUB_ISSUES.md](docs/GITHUB_ISSUES.md).
-
-**Total**: 18 issues réparties en 7 epics
-
-Pour créer les issues (via GitHub CLI):
+### Exécuter les Tests Localement
 
 ```bash
-# Exemple
-gh issue create \
-  --title "Implement /api/feed endpoint" \
-  --body-file docs/issue-templates/epic-1-issue-1.md \
-  --label "backend,MVP,high-priority"
+# Backend (Jest + Supertest)
+cd backend && npm test
+
+# Backend avec rapport de couverture
+cd backend && npm test -- --coverage
+
+# Frontend (Vitest)
+cd frontend && npm test
 ```
 
-Ou créer manuellement dans l'interface GitHub en copiant le contenu de `GITHUB_ISSUES.md`.
+### Pipeline GitHub Actions
+
+Le workflow `.github/workflows/ci.yml` se déclenche sur chaque `push` et `pull_request` :
+
+| Job | Outil | Matrix |
+|-----|-------|--------|
+| `backend-lint` | ESLint | Node 18 & 20 |
+| `backend-test` | Jest + coverage (seuil ≥ 80%) | Node 18 & 20 |
+| `frontend-lint` | *(à configurer)* | Node 20 |
+| `frontend-test` | Vitest + coverage (seuil ≥ 70%) | Node 20 |
+| `npm-audit` | npm audit --audit-level=critical | — |
+| `trivy-scan` | Trivy (CRITICAL) sur images Docker | — |
+| `docker-build` | Build multi-stage (backend + frontend) | — |
+| `e2e-smoke` | Playwright *(main branch only)* | — |
+
+> **Couverture actuelle** : les seuils sont contrôlés en CI mais non encore atteints → voir section [Reste à faire](#-roadmap-mvp).
 
 ## 👥 Contribution
 
-### Workflow de Développement
+### Workflow Git
 
-1. Créer une branche `feature/nom-feature`
-2. Développer avec tests
-3. Pousser et créer une Pull Request
-4. CI doit passer au vert
-5. Code review
-6. Merge vers `main`
+```
+main ←─── develop ←─── feature/nom-feature
+                 └──── fix/nom-fix
+```
+
+1. Créer une branche depuis `develop` : `git checkout -b feature/ma-feature`
+2. Développer avec tests unitaires
+3. Pousser et créer une Pull Request vers `develop`
+4. Attendre que la CI passe (tous les jobs en vert)
+5. Code review par un pair
+6. Merge et suppression de la branche
 
 ### Standards de Code
 
-- **TypeScript strict mode**
-- **ESLint + Prettier** (à configurer)
-- **Tests requis** pour nouvelles features
-- **Documentation** à jour
-- **Commits conventionnels** (feat, fix, docs, etc.)
+- **TypeScript strict mode** — `"strict": true` dans `tsconfig.json`
+- **ESLint** — backend configuré (`@typescript-eslint`, `eslint-plugin-security`) ; frontend à finaliser
+- **Commits conventionnels** : `feat:`, `fix:`, `docs:`, `refactor:`, `test:`, `ci:`
+- **Tests requis** pour toute nouvelle fonctionnalité
+- **Documentation** mise à jour avec le code
+
+### Créer des Issues GitHub
+
+Les issues structurées sont disponibles dans [docs/GITHUB_ISSUES.md](docs/GITHUB_ISSUES.md).
+
+```bash
+# Exemple via GitHub CLI
+gh issue create \
+  --title "feat: implement 2FA TOTP for admin accounts" \
+  --body-file docs/GITHUB_ISSUES.md \
+  --label "security,high-priority"
+```
 
 ## 📞 Support
 
-- **Issues GitHub**: https://github.com/elmaquito/NOTIMATIC/issues
-- **Documentation**: Voir dossier `docs/`
-- **GDPR/DPO**: dpo@notimatic.example.com (à configurer)
+| Canal | Adresse |
+|-------|---------|
+| Issues GitHub | https://github.com/elmaquito/NOTIMATIC/issues |
+| Documentation | Répertoire `docs/` |
+| DPO (RGPD) | dpo@notimatic.example.com *(à configurer)* |
 
-## 📄 License
+## 📄 Licence
 
-À définir
+À définir — voir [LICENSE](LICENSE) si présent.
 
 ---
 
-**Version**: v1.2.0  
-**Dernière mise à jour**: 1er avril 2026  
-**Statut**: MVP livré — améliorations continues 🚀
-
+| Champ | Valeur |
+|-------|--------|
+| **Version courante** | v1.2.0 |
+| **Statut** | MVP livré — améliorations continues 🚀 |
+| **Dernière mise à jour** | 1er avril 2026 |
+| **Auteur** | [elmaquito](https://github.com/elmaquito) |

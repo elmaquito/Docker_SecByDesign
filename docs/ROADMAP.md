@@ -1,8 +1,39 @@
-# Roadmap NOTIMATIC - MVP Feed d'actualités
+# NOTIMATIC — Roadmap Technique
+
+> **Document** : Roadmap et suivi d'avancement  
+> **Projet** : NOTIMATIC — Application de prise de notes sécurisée  
+> **Version du document** : 2.0  
+> **Dernière mise à jour** : 1er avril 2026  
+> **Auteur** : GitHub Copilot Agent
+
+---
+
+## Sommaire
+
+1. [Vue d'ensemble](#vue-densemble)
+2. [v0.1.0 — Fondations](#version-010---fondations-actuel)
+3. [v0.2.0 — Base de Données & TypeScript](#version-020---extensions-base-de-données--typescript)
+4. [v0.3.0 — API Unified Tags & Profils](#version-030---api-unified-tags--profils)
+5. [v0.4.0 — Feed Intelligent & Assignation](#version-040---feed-intelligent--assignation)
+6. [v0.5.0 — Sécurité & GDPR](#version-050---sécurité--gdpr)
+7. [v0.6.0 — Tests & CI/CD](#version-060---tests--cicd)
+8. [v0.7.0 — UI/UX & Wireframes](#version-070---uiux--wireframes)
+9. [v1.0.0 — Production Ready](#version-100---production-ready)
+10. [Reste à Faire (Post-v1.0.0)](#reste-à-faire-post-v100)
+11. [Versions Futures](#versions-futures-post-v100)
+12. [Timeline Globale](#timeline-globale)
+13. [Priorités](#priorités-post-v100)
+14. [Dépendances entre Versions](#dépendances-entre-versions)
+15. [Métriques de Succès](#métriques-de-succès)
+
+---
 
 ## Vue d'ensemble
 
-Ce document présente la roadmap complète pour le développement du MVP du système de feed d'actualités avec commentaires, assignation par thèmes et catégories ciblées.
+Ce document présente la roadmap complète du projet NOTIMATIC : historique des versions livrées, état des travaux en cours, et planification des fonctionnalités post-MVP.
+
+**Périmètre MVP** : authentification RBAC · feed ciblé · commentaires · tags unifiés · conformité RGPD · CI/CD  
+**Version courante** : v1.2.0 · **Statut** : MVP livré, améliorations continues
 
 ## Version 0.1.0 - Fondations (Actuel)
 
@@ -179,7 +210,7 @@ Renforcer la sécurité et implémenter la conformité GDPR.
 
 ## Version 0.6.0 - Tests & CI/CD
 
-**Statut**: ✅ Complété
+**Statut**: 🔄 En cours (couverture et E2E non atteints)
 
 ### Objectifs
 Automatiser les tests et la CI/CD.
@@ -230,7 +261,7 @@ Automatiser les tests et la CI/CD.
 - [x] Configuration cache npm pour CI
 - [x] Matrix strategy pour tester Node 18/20
 - [x] CI fix strict (PR #18): structure workflow, vérifications de couverture, permissions
-- [ ] Badge de statut CI dans README (lien vers workflow)
+- [x] Badge de statut CI dans README (lien vers workflow)
 
 ### Critères d'acceptation
 - [x] CI passe sur chaque push
@@ -243,7 +274,7 @@ Automatiser les tests et la CI/CD.
 
 ## Version 0.7.0 - UI/UX & Wireframes
 
-**Statut**: ✅ Complété
+**Statut**: 🔄 En cours (wireframes et UI de base livrés ; ThemeManager, CategoryManager et WCAG à finaliser)
 
 ### Objectifs
 Améliorer l'interface et créer la documentation UX.
@@ -263,9 +294,9 @@ Améliorer l'interface et créer la documentation UX.
 - [x] Responsive design (mobile, tablet, desktop)
 - [x] Dark / Light mode avec persistance (`useTheme`)
 - [x] Loader visuel pour les opérations async (`Loader.vue`)
-- [ ] `ThemeManager.vue` — Gestion des thèmes (admin/teacher)
-- [ ] `CategoryManager.vue` — Gestion des catégories
-- [ ] Accessibilité (WCAG AA)
+- [ ] `ThemeManager.vue` — Interface admin/teacher pour gestion des thèmes
+- [ ] `CategoryManager.vue` — Interface admin/teacher pour gestion des catégories
+- [ ] Accessibilité WCAG AA (audit + correctifs)
 
 ### Critères d'acceptation
 - [x] Wireframes complets et détaillés
@@ -327,27 +358,31 @@ Les éléments ci-dessous sont les travaux identifiés à compléter pour attein
 
 ---
 
-## Versions Futures (Post-MVP)
+## Versions Futures (Post-v1.0.0)
 
 ### Version 1.1.0 — Notifications
-- Notifications in-app en temps réel (WebSocket)
+- Notifications in-app en temps réel (WebSocket / SSE)
 - Notifications e-mail (NodeMailer)
-- Préférences de notifications utilisateur
+- Préférences de notifications par utilisateur
 
 ### Version 1.2.0 — Recherche Avancée
-- Recherche full-text notes (PostgreSQL FTS)
-- Filtres avancés
-- Tri par pertinence
+- Recherche full-text sur les notes (PostgreSQL `tsvector` / `tsquery`)
+- Filtres avancés multi-critères
+- Tri par pertinence (tf-idf ou ts_rank)
 
-### Version 1.3.0 — Collaboration & Sécurité Avancée
-- Mentions utilisateurs (@username)
-- Réactions aux notes/commentaires
-- 2FA TOTP (si non livré avant)
+### Version 1.3.0 — Sécurité Avancée
+- 2FA TOTP (Google Authenticator, Authy)
+- Interface QR Code d'enrôlement
+- Vue "Activités récentes" pour l'utilisateur
 
-### Version 1.4.0 — Analytics
-- Tableau de bord analytics (teacher/admin)
-- Statistiques engagement
-- Rapports exportables
+### Version 1.4.0 — Collaboration
+- Mentions utilisateurs (`@username`) dans les commentaires
+- Réactions enrichies (emojis, compteurs)
+
+### Version 1.5.0 — Analytics
+- Tableau de bord engagement (teacher/admin)
+- Statistiques de lecture par note
+- Rapports exportables (CSV/JSON)
 
 ---
 
@@ -360,8 +395,8 @@ Les éléments ci-dessous sont les travaux identifiés à compléter pour attein
 | 0.3.0 | API Unified Tags & Profils | ✅ Complété |
 | 0.4.0 | Feed & Assignation | ✅ Complété |
 | 0.5.0 | Sécurité & GDPR | ✅ Complété |
-| 0.6.0 | Tests & CI/CD | ✅ Complété |
-| 0.7.0 | UI/UX & Wireframes | ✅ Complété |
+| 0.6.0 | Tests & CI/CD | 🔄 En cours |
+| 0.7.0 | UI/UX & Wireframes | 🔄 En cours |
 | 1.0.0 | Production Ready | ✅ Complété |
 | 1.x | Sécurité avancée, E2E, Analytics… | 🔄 En cours |
 
@@ -372,22 +407,23 @@ Les éléments ci-dessous sont les travaux identifiés à compléter pour attein
 ## Priorités (Post-v1.0.0)
 
 ### 🔴 Haute Priorité
-- Tests E2E Playwright
-- Couverture tests (80% backend / 70% frontend)
-- 2FA TOTP pour les admins
-- Endpoint `GET /api/v1/audit`
+- Tests E2E Playwright (smoke, teacher flow, student flow, GDPR flow)
+- Couverture tests (≥ 80% backend / ≥ 70% frontend) — seuils contrôlés en CI
+- 2FA TOTP pour les admins (`auth.controller.ts` + interface QR Code)
+- Endpoint `GET /api/v1/audit` (admin) avec pagination et filtres
 
 ### 🟡 Moyenne Priorité
-- Vue "Activités récentes" (logs utilisateur)
-- ThemeManager.vue / CategoryManager.vue
-- Accessibilité WCAG AA
-- Stockage sécurisé des secrets
+- Vue "Activités récentes" (logs consultables par l'utilisateur)
+- `ThemeManager.vue` — Interface admin/teacher de gestion des thèmes
+- `CategoryManager.vue` — Interface admin/teacher de gestion des catégories
+- Accessibilité WCAG AA — audit complet et correctifs
+- ESLint configuré côté frontend (actuellement non-opérationnel)
+- Stockage sécurisé des secrets (Vault ou AWS SSM)
 
 ### 🟢 Basse Priorité (Nice-to-have)
-- Backup/restore PostgreSQL
-- Monitoring avancé (Prometheus/Grafana)
-- Swagger/OpenAPI interactif
-- Analytics dashboard
+- Backup/restore PostgreSQL (scripts et documentation)
+- Monitoring avancé (Prometheus / Grafana)
+- Swagger / OpenAPI — documentation interactive de l'API
 
 ---
 

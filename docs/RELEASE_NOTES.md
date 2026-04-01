@@ -1,30 +1,50 @@
-# Release Notes & Validation History
+# NOTIMATIC — Notes de Version & Historique de Validation
 
-This document tracks the implemented versions of Notimatic, detailing the features added, the validation strategy employed, and the actual test results.
+> **Document** : Changelog détaillé par version  
+> **Projet** : NOTIMATIC — Application de prise de notes sécurisée  
+> **Version du document** : 2.0  
+> **Dernière mise à jour** : 1er avril 2026
+
+---
+
+## Sommaire
+
+| Version | Date | Statut |
+|---------|------|--------|
+| [CI Fix — PR #18](#ci-fix--strict-workflow-pr-18) | 1 avr. 2026 | ✅ |
+| [v1.0.0 — Production Ready](#v100---production-ready) | 17 fév. 2026 | ✅ |
+| [v0.7.0 — UI/UX & Wireframes](#v070---uiux--wireframes) | 17 fév. 2026 | ✅ |
+| [v0.6.0 — Tests & CI/CD](#v060---testing--cicd-automation) | 17 fév. 2026 | ✅ |
+| [v0.5.0 — Sécurité & RGPD](#v050---security--gdpr-compliance) | 17 fév. 2026 | ✅ |
+| [v0.2.0 — Core Customization](#v020---core-customization--organization) | 16 fév. 2026 | ✅ |
+
+---
 
 ## CI Fix — Strict Workflow (PR #18)
-**Date:** April 1, 2026  
-**Branch/PR:** `ci-fix` → `main` (PR #18)  
-**Status:** ✅ Applied
 
-### Summary
-Corrected and hardened the GitHub Actions CI pipeline to enforce strict quality gates on every push and pull request.
+**Date :** 1er avril 2026  
+**Branche/PR :** `ci-fix` → `main` (PR #18)  
+**Statut :** ✅ Appliqué
 
-### Changes
-| Area | Change |
+### Résumé
+Correction et durcissement du pipeline GitHub Actions pour imposer des portes qualité strictes sur chaque push et pull request.
+
+### Changements apportés
+
+| Domaine | Description |
 | :--- | :--- |
-| **Workflow structure** | Separated jobs: `backend-lint`, `backend-test`, `frontend-lint`, `frontend-test`, `npm-audit`, `trivy-scan`, `docker-build`, `e2e-smoke`, `upload-reports` |
-| **Matrix builds** | Backend lint + test run on both Node 18 and Node 20 |
-| **Coverage gates** | Added inline coverage threshold checks: ≥ 80% backend, ≥ 70% frontend |
-| **Security** | `npm audit --audit-level=critical` for both packages; Trivy image scan (CRITICAL severity) |
-| **E2E** | Playwright smoke tests triggered only on `main` branch or `workflow_dispatch` |
-| **Permissions** | Added explicit `permissions: contents: read; security-events: write; actions: read` |
-| **Cache** | `cache: npm` configured on all Node setup steps |
+| **Structure workflow** | Jobs séparés : `backend-lint`, `backend-test`, `frontend-lint`, `frontend-test`, `npm-audit`, `trivy-scan`, `docker-build`, `e2e-smoke`, `upload-reports` |
+| **Matrix builds** | Backend lint + test s'exécutent sur Node 18 **et** Node 20 |
+| **Portes de couverture** | Vérification inline des seuils : ≥ 80% backend, ≥ 70% frontend |
+| **Sécurité** | `npm audit --audit-level=critical` pour backend et frontend ; scan Trivy (CRITICAL) sur images Docker |
+| **E2E** | Tests Playwright déclenchés uniquement sur la branche `main` ou `workflow_dispatch` |
+| **Permissions** | `permissions: contents: read; security-events: write; actions: read` déclarées explicitement |
+| **Cache npm** | `cache: npm` activé sur les jobs lint/test (backend et frontend) ; non activé sur `npm-audit` et `e2e-smoke` pour garantir une résolution propre |
 
 ### Impact
-- CI now fails fast if coverage thresholds are not met
-- Docker images are scanned for critical CVEs before being promoted
-- Node matrix ensures compatibility across the supported LTS range
+- Le CI échoue immédiatement si les seuils de couverture ne sont pas atteints
+- Les images Docker sont scannées pour les CVE critiques avant toute promotion
+- La matrix Node garantit la compatibilité sur les deux versions LTS supportées
 
 ---
 
