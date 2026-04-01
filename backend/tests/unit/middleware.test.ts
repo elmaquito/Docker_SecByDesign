@@ -1,10 +1,10 @@
-import { authenticate, authorize } from '../common/middleware';
+import { authenticate, authorize } from '../../src/common/middleware';
 import { Request, Response, NextFunction } from 'express';
-import { TokenService } from '../auth/token.service';
+import { TokenService } from '../../src/auth/token.service';
 
 // Mock dependencies
-jest.mock('../auth/token.service');
-jest.mock('../config/database', () => ({
+jest.mock('../../src/auth/token.service');
+jest.mock('../../src/config/database', () => ({
   pool: {
     query: jest.fn(),
   },
@@ -38,18 +38,17 @@ describe('Auth Middleware', () => {
     });
 
     it('should call next if valid access token provided', async () => {
-        req.cookies = { auth_token: 'valid_token' };
-        
-        // Mock verifyAccessToken
-        (TokenService.prototype.verifyAccessToken as jest.Mock).mockReturnValue({
-            id: 1,
-            username: 'test',
-            role: 'student'
-        });
+      req.cookies = { auth_token: 'valid_token' };
 
-        await authenticate(req as Request, res as Response, next);
-        expect(next).toHaveBeenCalled();
-        expect(req.user).toEqual({ id: 1, username: 'test', role: 'student' });
+      (TokenService.prototype.verifyAccessToken as jest.Mock).mockReturnValue({
+        id: 1,
+        username: 'test',
+        role: 'student'
+      });
+
+      await authenticate(req as Request, res as Response, next);
+      expect(next).toHaveBeenCalled();
+      expect(req.user).toEqual({ id: 1, username: 'test', role: 'student' });
     });
   });
 

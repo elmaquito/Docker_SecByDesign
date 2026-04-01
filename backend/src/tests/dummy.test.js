@@ -1,1 +1,0 @@
-test('dummy inside src tests', () => {});
