@@ -2,7 +2,11 @@ import express from 'express';
 import helmet from 'helmet';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
-import { PORT, NODE_ENV, CORS_ORIGINS } from './config/env';
+import { PORT, NODE_ENV, CORS_ORIGINS, validateEnvironment } from './config/env';
+
+// Validate environment early 
+validateEnvironment();
+
 import { pool } from './config/database';
 import { apiLimiter, sanitizeInput } from './common/middleware';
 import authRoutes from './auth/auth.routes';

@@ -254,8 +254,24 @@ jobs:
       - name: Start services (docker-compose)
         run: |
           docker compose -f infrastructure/docker-compose.dev.yml up -d
-      - name: Wait services
-        run: sleep 20
+      - name: Wait for services to be ready
+        run: |
+          echo "Waiting for backend to be ready..."
+          for i in {1..60}; do
+            if curl -sf http://localhost:3001/health; then
+              echo "✅ Backend is ready"
+              break
+            fi
+            echo "Waiting for backend... ($i/60)"
+            sleep 5
+          done
+          
+          # Final health check
+          curl -sf http://localhost:3001/health || {
+            echo "❌ Backend failed to start"
+            docker compose -f infrastructure/docker-compose.dev.yml logs backend
+            exit 1
+          }
       - name: Run Playwright smoke tests
         working-directory: tests/e2e
         run: npx playwright test --config=playwright.config.ts --project=chromium --reporter=list
