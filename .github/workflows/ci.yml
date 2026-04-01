@@ -70,24 +70,26 @@ jobs:
       - name: Install dependencies
         working-directory: backend
         run: npm ci
+      - name: Install PostgreSQL client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
       - name: Setup Test Database
         env:
           PGPASSWORD: test_password
         run: |
-          # Wait for postgres service hostname to be ready
+          # Wait for postgres service to be ready
           for i in {1..30}; do
-            pg_isready -h postgres -U user && break
+            pg_isready -h localhost -U user && break
             echo "Waiting for postgres..."
             sleep 1
           done
           # Apply init SQL
-          psql -h postgres -U user -d notimatic_test -f backend/init.sql
+          psql -h localhost -U user -d notimatic_test -f backend/init.sql
           # Run migrations (best effort)
           bash backend/migrate.sh || echo "Migration script returned non-zero (check logs)"
       - name: Run tests with coverage
         working-directory: backend
         env:
-          DB_HOST: postgres
+          DB_HOST: localhost
           DB_USER: user
           DB_PASSWORD: test_password
           DB_NAME: notimatic_test
