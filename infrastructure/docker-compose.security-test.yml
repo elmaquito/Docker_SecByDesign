@@ -11,7 +11,7 @@ services:
     networks:
       - security-net
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U user"]
+      test: ["CMD-SHELL", "pg_isready -U user -d notimatic_test"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -34,6 +34,13 @@ services:
     networks:
       - security-net
     # Backend ne doit pas exposer de port directement (isolation)
+    expose:
+      - "3000"
+    healthcheck:
+      test: ["CMD", "/nodejs/bin/node", "-e", "require('http').get('http://localhost:3000/health', (r) => process.exit(r.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
 
   waf:
     image: nginx:alpine
@@ -42,7 +49,8 @@ services:
     volumes:
       - ./config/nginx-waf.conf:/etc/nginx/nginx.conf:ro
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
     networks:
       - security-net
     healthcheck:
