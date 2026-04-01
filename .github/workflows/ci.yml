@@ -325,7 +325,7 @@ jobs:
         uses: actions/checkout@v4
       - name: Build and start security test stack (WAF + backend + DB)
         run: |
-          docker compose -f infrastructure/docker-compose.security-test.yml up -d --build
+          docker compose -f infrastructure/docker-compose.security-test.yml --project-name ${{ github.job }}-${{ github.run_id }} up -d --build
       - name: Wait for WAF to be ready
         run: |
           for i in $(seq 1 60); do
@@ -334,7 +334,7 @@ jobs:
             sleep 5
           done
           curl -sf http://localhost:8080/ || \
-            { echo "WAF failed to start"; docker compose -f infrastructure/docker-compose.security-test.yml logs; exit 1; }
+            { echo "WAF failed to start"; docker compose -f infrastructure/docker-compose.security-test.yml --project-name ${{ github.job }}-${{ github.run_id }} logs; exit 1; }
       - name: "Test XSS: <script> tag in query param blocked (expect HTTP 403)"
         run: |
           # %3Cscript%3Ealert%281%29%3C%2Fscript%3E = <script>alert(1)</script>
@@ -364,10 +364,10 @@ jobs:
           echo "✅ WAF blocked SQLi OR tautology"
       - name: Print WAF logs on failure
         if: failure()
-        run: docker compose -f infrastructure/docker-compose.security-test.yml logs waf
+        run: docker compose -f infrastructure/docker-compose.security-test.yml --project-name ${{ github.job }}-${{ github.run_id }} logs waf
       - name: Tear down stack
         if: always()
-        run: docker compose -f infrastructure/docker-compose.security-test.yml down -v
+        run: docker compose -f infrastructure/docker-compose.security-test.yml --project-name ${{ github.job }}-${{ github.run_id }} down -v
 
   firewall-scan:
     name: "Phase 3 – Network Isolation: Port Exposure Scan"
@@ -381,13 +381,15 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y nmap
       - name: Build and start security test stack
         run: |
-          docker compose -f infrastructure/docker-compose.security-test.yml up -d --build
+          docker compose -f infrastructure/docker-compose.security-test.yml --project-name ${{ github.job }}-${{ github.run_id }} up -d --build
       - name: Wait for WAF to be ready
         run: |
           for i in $(seq 1 60); do
             curl -sf http://localhost:8080/ && break
             sleep 5
           done
+          curl -sf http://localhost:8080/ || \
+            { echo "WAF failed to start"; docker compose -f infrastructure/docker-compose.security-test.yml --project-name ${{ github.job }}-${{ github.run_id }} logs; exit 1; }
       - name: "Verify WAF port 8080 is accessible (should be OPEN)"
         run: |
           STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/)
@@ -410,7 +412,7 @@ jobs:
             echo "✅ Port 5432 (database): not exposed"
       - name: Tear down stack
         if: always()
-        run: docker compose -f infrastructure/docker-compose.security-test.yml down -v
+        run: docker compose -f infrastructure/docker-compose.security-test.yml --project-name ${{ github.job }}-${{ github.run_id }} down -v
 
   api-gw-tests:
     name: "Phase 4 – API Auth & Security Headers (Kong TBD)"
@@ -425,7 +427,7 @@ jobs:
         uses: actions/checkout@v4
       - name: Build and start security test stack
         run: |
-          docker compose -f infrastructure/docker-compose.security-test.yml up -d --build
+          docker compose -f infrastructure/docker-compose.security-test.yml --project-name ${{ github.job }}-${{ github.run_id }} up -d --build
       - name: Wait for WAF to be ready
         run: |
           for i in $(seq 1 60); do
@@ -433,7 +435,7 @@ jobs:
             sleep 5
           done
           curl -sf http://localhost:8080/ || \
-            { docker compose -f infrastructure/docker-compose.security-test.yml logs; exit 1; }
+            { docker compose -f infrastructure/docker-compose.security-test.yml --project-name ${{ github.job }}-${{ github.run_id }} logs; exit 1; }
       - name: "Verify /api/v1/notes requires authentication (expect 401)"
         run: |
           STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/api/v1/notes)
@@ -466,7 +468,7 @@ jobs:
             echo "✅ X-Frame-Options present" || echo "⚠️  Missing X-Frame-Options"
       - name: Tear down stack
         if: always()
-        run: docker compose -f infrastructure/docker-compose.security-test.yml down -v
+        run: docker compose -f infrastructure/docker-compose.security-test.yml --project-name ${{ github.job }}-${{ github.run_id }} down -v
 
   ansible-automation:
     name: "Phase 6 – Ansible: Healthcheck & WAF Security Validation"
@@ -482,7 +484,7 @@ jobs:
           sudo apt-get install -y ansible
       - name: Build and start security test stack
         run: |
-          docker compose -f infrastructure/docker-compose.security-test.yml up -d --build
+          docker compose -f infrastructure/docker-compose.security-test.yml --project-name ${{ github.job }}-${{ github.run_id }} up -d --build
       - name: Wait for WAF to be ready
         run: |
           for i in $(seq 1 60); do
@@ -490,7 +492,7 @@ jobs:
             sleep 5
           done
           curl -sf http://localhost:8080/ || \
-            { docker compose -f infrastructure/docker-compose.security-test.yml logs; exit 1; }
+            { docker compose -f infrastructure/docker-compose.security-test.yml --project-name ${{ github.job }}-${{ github.run_id }} logs; exit 1; }
       - name: "Run Ansible healthcheck playbook"
         run: |
           ansible-playbook \
@@ -505,7 +507,7 @@ jobs:
             -v
       - name: Tear down stack
         if: always()
-        run: docker compose -f infrastructure/docker-compose.security-test.yml down -v
+        run: docker compose -f infrastructure/docker-compose.security-test.yml --project-name ${{ github.job }}-${{ github.run_id }} down -v
 
   siem-log-check:
     name: "Phase 5 – Security Event Logging (Wazuh SIEM TBD)"
@@ -520,7 +522,7 @@ jobs:
         uses: actions/checkout@v4
       - name: Build and start security test stack
         run: |
-          docker compose -f infrastructure/docker-compose.security-test.yml up -d --build
+          docker compose -f infrastructure/docker-compose.security-test.yml --project-name ${{ github.job }}-${{ github.run_id }} up -d --build
       - name: Wait for WAF to be ready
         run: |
           for i in $(seq 1 60); do
@@ -528,7 +530,7 @@ jobs:
             sleep 5
           done
           curl -sf http://localhost:8080/ || \
-            { docker compose -f infrastructure/docker-compose.security-test.yml logs; exit 1; }
+            { docker compose -f infrastructure/docker-compose.security-test.yml --project-name ${{ github.job }}-${{ github.run_id }} logs; exit 1; }
       - name: Generate failed authentication events (brute-force simulation)
         run: |
           for i in $(seq 1 5); do
@@ -541,14 +543,14 @@ jobs:
           echo "Generated 5 failed login attempts"
       - name: "Verify backend produces log output (SIEM readiness)"
         run: |
-          LOGS=$(docker compose -f infrastructure/docker-compose.security-test.yml logs backend 2>&1)
+          LOGS=$(docker compose -f infrastructure/docker-compose.security-test.yml --project-name ${{ github.job }}-${{ github.run_id }} logs backend 2>&1)
           echo "=== Backend logs (last 50 lines) ==="
           echo "$LOGS" | tail -50
           [ -n "$LOGS" ] || { echo "FAIL: Backend produced no logs"; exit 1; }
           echo "✅ Backend logging is active"
       - name: "Check backend logs for security event entries"
         run: |
-          MATCHES=$(docker compose -f infrastructure/docker-compose.security-test.yml logs backend 2>&1 | \
+          MATCHES=$(docker compose -f infrastructure/docker-compose.security-test.yml --project-name ${{ github.job }}-${{ github.run_id }} logs backend 2>&1 | \
             grep -Ei "error|warn|unauthorized|forbidden|login|auth|fail" | head -20)
           if [ -n "$MATCHES" ]; then
             echo "✅ Security events found in backend logs:"
@@ -559,7 +561,7 @@ jobs:
           fi
       - name: Tear down stack
         if: always()
-        run: docker compose -f infrastructure/docker-compose.security-test.yml down -v
+        run: docker compose -f infrastructure/docker-compose.security-test.yml --project-name ${{ github.job }}-${{ github.run_id }} down -v
 
   zap-scan:
     name: "Phase 2/3 – OWASP ZAP Baseline Scan (via WAF)"
@@ -571,7 +573,7 @@ jobs:
         uses: actions/checkout@v4
       - name: Build and start security test stack
         run: |
-          docker compose -f infrastructure/docker-compose.security-test.yml up -d --build
+          docker compose -f infrastructure/docker-compose.security-test.yml --project-name ${{ github.job }}-${{ github.run_id }} up -d --build
       - name: Wait for WAF to be ready
         run: |
           for i in $(seq 1 60); do
@@ -579,7 +581,7 @@ jobs:
             sleep 5
           done
           curl -sf http://localhost:8080/ || \
-            { docker compose -f infrastructure/docker-compose.security-test.yml logs; exit 1; }
+            { docker compose -f infrastructure/docker-compose.security-test.yml --project-name ${{ github.job }}-${{ github.run_id }} logs; exit 1; }
 
       # Fix: ensure ZAP has a writable working directory
       - name: Prepare ZAP working directory
@@ -602,4 +604,6 @@ jobs:
           path: report_html.html
       - name: Tear down stack
         if: always()
-        run: docker compose -f infrastructure/docker-compose.security-test.yml down -v
+        run: docker compose -f infrastructure/docker-compose.security-test.yml --project-name ${{ github.job }}-${{ github.run_id }} down -v
+
+

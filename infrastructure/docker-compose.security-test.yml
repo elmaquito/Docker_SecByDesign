@@ -6,8 +6,9 @@ services:
       POSTGRES_USER: user
       POSTGRES_PASSWORD: test_password
       POSTGRES_DB: notimatic_test
+    tmpfs:
+      - /var/lib/postgresql/data
     volumes:
-      - postgres_data:/var/lib/postgresql/data
       - ../backend/init.sql:/docker-entrypoint-initdb.d/init.sql
     networks:
       - security-net
@@ -43,6 +44,7 @@ services:
       interval: 10s
       timeout: 5s
       retries: 10
+      start_period: 30s
 
   waf:
     image: owasp/modsecurity-crs:nginx-alpine
@@ -62,11 +64,9 @@ services:
       test: ["CMD-SHELL", "curl -f http://localhost/ || exit 1"]
       interval: 10s
       timeout: 5s
-      retries: 5
+      retries: 10
+      start_period: 30s
 
 networks:
   security-net:
     driver: bridge
-
-volumes:
-  postgres_data:
