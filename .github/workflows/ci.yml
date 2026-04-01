@@ -328,7 +328,7 @@ jobs:
           docker compose -f infrastructure/docker-compose.security-test.yml --project-name ${{ github.job }}-${{ github.run_id }} up -d --build
       - name: Wait for WAF to be ready
         run: |
-          docker compose -f infrastructure/docker-compose.security-test.yml --project-name ${{ github.job }}-${{ github.run_id }} wait waf || { echo "WAF failed to become healthy"; docker compose -f infrastructure/docker-compose.security-test.yml --project-name ${{ github.job }}-${{ github.run_id }} logs; exit 1; }
+          timeout 120 bash -c 'until docker compose -f infrastructure/docker-compose.security-test.yml --project-name ${{ github.job }}-${{ github.run_id }} ps waf 2>/dev/null | grep -q healthy; do sleep 5; done' || { echo "WAF failed to become healthy"; docker compose -f infrastructure/docker-compose.security-test.yml --project-name ${{ github.job }}-${{ github.run_id }} logs; exit 1; }
       - name: "Test XSS: <script> tag in query param blocked (expect HTTP 403)"
         run: |
           # %3Cscript%3Ealert%281%29%3C%2Fscript%3E = <script>alert(1)</script>
@@ -378,7 +378,7 @@ jobs:
           docker compose -f infrastructure/docker-compose.security-test.yml --project-name ${{ github.job }}-${{ github.run_id }} up -d --build
       - name: Wait for WAF to be ready
         run: |
-          docker compose -f infrastructure/docker-compose.security-test.yml --project-name ${{ github.job }}-${{ github.run_id }} wait waf || { echo "WAF failed to become healthy"; docker compose -f infrastructure/docker-compose.security-test.yml --project-name ${{ github.job }}-${{ github.run_id }} logs; exit 1; }
+          timeout 120 bash -c 'until docker compose -f infrastructure/docker-compose.security-test.yml --project-name ${{ github.job }}-${{ github.run_id }} ps waf 2>/dev/null | grep -q healthy; do sleep 5; done' || { echo "WAF failed to become healthy"; docker compose -f infrastructure/docker-compose.security-test.yml --project-name ${{ github.job }}-${{ github.run_id }} logs; exit 1; }
       - name: "Verify WAF port 8080 is accessible (should be OPEN)"
         run: |
           STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/)
@@ -419,7 +419,7 @@ jobs:
           docker compose -f infrastructure/docker-compose.security-test.yml --project-name ${{ github.job }}-${{ github.run_id }} up -d --build
       - name: Wait for WAF to be ready
         run: |
-          docker compose -f infrastructure/docker-compose.security-test.yml --project-name ${{ github.job }}-${{ github.run_id }} wait waf || { echo "WAF failed to become healthy"; docker compose -f infrastructure/docker-compose.security-test.yml --project-name ${{ github.job }}-${{ github.run_id }} logs; exit 1; }
+          timeout 120 bash -c 'until docker compose -f infrastructure/docker-compose.security-test.yml --project-name ${{ github.job }}-${{ github.run_id }} ps waf 2>/dev/null | grep -q healthy; do sleep 5; done' || { echo "WAF failed to become healthy"; docker compose -f infrastructure/docker-compose.security-test.yml --project-name ${{ github.job }}-${{ github.run_id }} logs; exit 1; }
       - name: "Verify /api/v1/notes requires authentication (expect 401)"
         run: |
           STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/api/v1/notes)
@@ -471,7 +471,7 @@ jobs:
           docker compose -f infrastructure/docker-compose.security-test.yml --project-name ${{ github.job }}-${{ github.run_id }} up -d --build
       - name: Wait for WAF to be ready
         run: |
-          docker compose -f infrastructure/docker-compose.security-test.yml --project-name ${{ github.job }}-${{ github.run_id }} wait waf || { echo "WAF failed to become healthy"; docker compose -f infrastructure/docker-compose.security-test.yml --project-name ${{ github.job }}-${{ github.run_id }} logs; exit 1; }
+          timeout 120 bash -c 'until docker compose -f infrastructure/docker-compose.security-test.yml --project-name ${{ github.job }}-${{ github.run_id }} ps waf 2>/dev/null | grep -q healthy; do sleep 5; done' || { echo "WAF failed to become healthy"; docker compose -f infrastructure/docker-compose.security-test.yml --project-name ${{ github.job }}-${{ github.run_id }} logs; exit 1; }
       - name: "Run Ansible healthcheck playbook"
         run: |
           ansible-playbook \
@@ -504,7 +504,7 @@ jobs:
           docker compose -f infrastructure/docker-compose.security-test.yml --project-name ${{ github.job }}-${{ github.run_id }} up -d --build
       - name: Wait for WAF to be ready
         run: |
-          docker compose -f infrastructure/docker-compose.security-test.yml --project-name ${{ github.job }}-${{ github.run_id }} wait waf || { echo "WAF failed to become healthy"; docker compose -f infrastructure/docker-compose.security-test.yml --project-name ${{ github.job }}-${{ github.run_id }} logs; exit 1; }
+          timeout 120 bash -c 'until docker compose -f infrastructure/docker-compose.security-test.yml --project-name ${{ github.job }}-${{ github.run_id }} ps waf 2>/dev/null | grep -q healthy; do sleep 5; done' || { echo "WAF failed to become healthy"; docker compose -f infrastructure/docker-compose.security-test.yml --project-name ${{ github.job }}-${{ github.run_id }} logs; exit 1; }
       - name: Generate failed authentication events (brute-force simulation)
         run: |
           for i in $(seq 1 5); do
@@ -550,7 +550,7 @@ jobs:
           docker compose -f infrastructure/docker-compose.security-test.yml --project-name ${{ github.job }}-${{ github.run_id }} up -d --build
       - name: Wait for WAF to be ready
         run: |
-          docker compose -f infrastructure/docker-compose.security-test.yml --project-name ${{ github.job }}-${{ github.run_id }} wait waf || { echo "WAF failed to become healthy"; docker compose -f infrastructure/docker-compose.security-test.yml --project-name ${{ github.job }}-${{ github.run_id }} logs; exit 1; }
+          timeout 120 bash -c 'until docker compose -f infrastructure/docker-compose.security-test.yml --project-name ${{ github.job }}-${{ github.run_id }} ps waf 2>/dev/null | grep -q healthy; do sleep 5; done' || { echo "WAF failed to become healthy"; docker compose -f infrastructure/docker-compose.security-test.yml --project-name ${{ github.job }}-${{ github.run_id }} logs; exit 1; }
 
       # Fix: ensure ZAP has a writable working directory
       - name: Prepare ZAP working directory
@@ -575,4 +575,55 @@ jobs:
         if: always()
         run: docker compose -f infrastructure/docker-compose.security-test.yml --project-name ${{ github.job }}-${{ github.run_id }} down -v
 
-
+  summary:
+    name: CI Summary
+    runs-on: ubuntu-latest
+    if: always()
+    needs:
+      - backend-lint
+      - backend-test
+      - frontend-lint
+      - frontend-test
+      - npm-audit
+      - docker-build
+      - trivy-scan
+      - upload-reports
+      - doc-conformity
+    steps:
+      - name: Write CI job summary
+        env:
+          BACKEND_LINT: ${{ needs.backend-lint.result }}
+          BACKEND_TEST: ${{ needs.backend-test.result }}
+          FRONTEND_LINT: ${{ needs.frontend-lint.result }}
+          FRONTEND_TEST: ${{ needs.frontend-test.result }}
+          NPM_AUDIT: ${{ needs.npm-audit.result }}
+          DOCKER_BUILD: ${{ needs.docker-build.result }}
+          TRIVY_SCAN: ${{ needs.trivy-scan.result }}
+          UPLOAD_REPORTS: ${{ needs.upload-reports.result }}
+          DOC_CONFORMITY: ${{ needs.doc-conformity.result }}
+        run: |
+          status() { [ "$1" = "success" ] && echo "✅" || [ "$1" = "skipped" ] && echo "⏭️" || echo "❌"; }
+          echo "## CI Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Job | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "| --- | --- |" >> $GITHUB_STEP_SUMMARY
+          echo "| Backend Lint | $(status $BACKEND_LINT) $BACKEND_LINT |" >> $GITHUB_STEP_SUMMARY
+          echo "| Backend Test & Coverage | $(status $BACKEND_TEST) $BACKEND_TEST |" >> $GITHUB_STEP_SUMMARY
+          echo "| Frontend Lint | $(status $FRONTEND_LINT) $FRONTEND_LINT |" >> $GITHUB_STEP_SUMMARY
+          echo "| Frontend Test & Coverage | $(status $FRONTEND_TEST) $FRONTEND_TEST |" >> $GITHUB_STEP_SUMMARY
+          echo "| npm audit | $(status $NPM_AUDIT) $NPM_AUDIT |" >> $GITHUB_STEP_SUMMARY
+          echo "| Docker Build | $(status $DOCKER_BUILD) $DOCKER_BUILD |" >> $GITHUB_STEP_SUMMARY
+          echo "| Trivy Image Scan | $(status $TRIVY_SCAN) $TRIVY_SCAN |" >> $GITHUB_STEP_SUMMARY
+          echo "| Upload Reports | $(status $UPLOAD_REPORTS) $UPLOAD_REPORTS |" >> $GITHUB_STEP_SUMMARY
+          echo "| Documentation Conformity | $(status $DOC_CONFORMITY) $DOC_CONFORMITY |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          FAILED=false
+          for result in "$BACKEND_LINT" "$BACKEND_TEST" "$FRONTEND_LINT" "$FRONTEND_TEST" "$NPM_AUDIT" "$DOCKER_BUILD" "$TRIVY_SCAN" "$UPLOAD_REPORTS" "$DOC_CONFORMITY"; do
+            [ "$result" = "failure" ] && FAILED=true && break
+          done
+          if [ "$FAILED" = "true" ]; then
+            echo "❌ **CI FAILED** – One or more required jobs failed." >> $GITHUB_STEP_SUMMARY
+            exit 1
+          else
+            echo "✅ **CI PASSED** – All required jobs succeeded." >> $GITHUB_STEP_SUMMARY
+          fi
