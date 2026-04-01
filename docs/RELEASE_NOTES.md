@@ -2,6 +2,33 @@
 
 This document tracks the implemented versions of Notimatic, detailing the features added, the validation strategy employed, and the actual test results.
 
+## CI Fix — Strict Workflow (PR #18)
+**Date:** April 1, 2026  
+**Branch/PR:** `ci-fix` → `main` (PR #18)  
+**Status:** ✅ Applied
+
+### Summary
+Corrected and hardened the GitHub Actions CI pipeline to enforce strict quality gates on every push and pull request.
+
+### Changes
+| Area | Change |
+| :--- | :--- |
+| **Workflow structure** | Separated jobs: `backend-lint`, `backend-test`, `frontend-lint`, `frontend-test`, `npm-audit`, `trivy-scan`, `docker-build`, `e2e-smoke`, `upload-reports` |
+| **Matrix builds** | Backend lint + test run on both Node 18 and Node 20 |
+| **Coverage gates** | Added inline coverage threshold checks: ≥ 80% backend, ≥ 70% frontend |
+| **Security** | `npm audit --audit-level=critical` for both packages; Trivy image scan (CRITICAL severity) |
+| **E2E** | Playwright smoke tests triggered only on `main` branch or `workflow_dispatch` |
+| **Permissions** | Added explicit `permissions: contents: read; security-events: write; actions: read` |
+| **Cache** | `cache: npm` configured on all Node setup steps |
+
+### Impact
+- CI now fails fast if coverage thresholds are not met
+- Docker images are scanned for critical CVEs before being promoted
+- Node matrix ensures compatibility across the supported LTS range
+
+---
+
+
 ## v0.2.0 - Core Customization & Organization
 **Date:** February 16, 2026  
 **Status:** ✅ Validated

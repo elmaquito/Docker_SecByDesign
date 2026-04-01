@@ -1,14 +1,16 @@
 # Notimatic - Secure by Design Project
 
+![CI](https://github.com/elmaquito/NOTIMATIC/actions/workflows/ci.yml/badge.svg)
+
 Bienvenue dans le projet **Notimatic**. Ce dépôt contient l'architecture et l'implémentation de référence pour une application de prise de notes sécurisée avec **feed d'actualités, commentaires, assignation par thèmes et catégories ciblées**.
 
 ## 📋 État du Projet
 
-🎯 **Version**: v1.2.0 (Phase 2 Completed)
-✅ **Backend**: Node.js/Express/TypeScript (Auth, Unified Tags, Profiles, Audit)
-✅ **Frontend**: Vue 3/TypeScript/Pinia (Migration terminée)
-✅ **Documentation**: Architecture, API et Guides mis à jour
-✅ **Sécurité**: Audit logs, Rate limiting, Sanitization et Conformité RGPD
+🎯 **Version**: v1.2.0
+✅ **Backend**: Node.js/Express/TypeScript (Auth, Unified Tags, Profiles, Feed, GDPR, Audit)
+✅ **Frontend**: Vue 3 + TypeScript + Pinia + Vue Router (Migration complète)
+✅ **CI/CD**: GitHub Actions strict — lint, tests, couverture, Trivy, Docker Build (Node 18 & 20)
+✅ **Sécurité**: Rate limiting, Sanitization XSS, Audit logs, Conformité RGPD
 
 ## ✨ Fonctionnalités Clés
 - **Authentification Sécurisée**: JWT avec cookies HTTP-only, rôles RBAC
@@ -154,10 +156,12 @@ docker stack deploy -c infrastructure/docker-compose.prod.yml notimatic
 - Argon2 pour hashing
 - Zod pour validation
 
-**Frontend** (en migration):
-- Vue 3.3.4
+**Frontend**:
+- Vue 3.3.4 + TypeScript 5.x
 - Vite 4.4.5
-- **À ajouter**: TypeScript, Pinia, Vue Router, Vitest
+- Pinia (state management)
+- Vue Router 4 (navigation guards)
+- Vitest (tests unitaires)
 
 **Infrastructure**:
 - Docker + Docker Compose
@@ -167,47 +171,54 @@ docker stack deploy -c infrastructure/docker-compose.prod.yml notimatic
 
 ### Base de Données
 
-Schéma étendu avec 13 tables:
-- `users`, `profiles` - Utilisateurs et profils
-- `notes`, `comments` - Contenu
-- `themes`, `categories` - Organisation et ciblage
-- `note_themes`, `note_categories`, `note_targets` - Associations
-- `audit_logs`, `gdpr_export_requests` - Audit et GDPR
-- `schema_migrations` - Tracking migrations
+Schéma étendu avec 13+ tables :
+- `users`, `profiles` — Utilisateurs et profils
+- `notes`, `comments`, `reactions` — Contenu
+- `tags`, `note_tags` — Tags Unifiés (classe, spécialité, groupe, catégorie)
+- `user_tags` — Tags assignés aux utilisateurs (groupes, spécialités)
+- `audit_logs`, `gdpr_export_requests` — Audit et GDPR
+- `sessions`, `password_reset_tokens` — Sécurité des sessions
+- `schema_migrations` — Tracking migrations (001→009)
 
 Voir [ARCHITECTURE.md](docs/ARCHITECTURE.md) pour le schéma complet.
 
-## 🎯 Roadmap MVP
+## 🎯 État de la Roadmap MVP
 
-### Version 0.2.0 - Extensions Base de Données & TypeScript ⏳
-- Migrations SQL (✅ créées, à tester)
-- Migration frontend vers TypeScript + Pinia
+Toutes les versions MVP sont livrées. Les axes de travail restants portent sur la sécurité avancée (2FA) et les fonctionnalités post-MVP.
 
-### Version 0.3.0 - API Thèmes & Catégories
-- Endpoints CRUD pour themes et categories
-- Endpoints profils utilisateurs
+### ✅ v0.1.0 — Fondations
+Authentification JWT, CRUD notes, commentaires, Docker.
 
-### Version 0.4.0 - Feed Intelligent & Assignation 🎯
-- Endpoint `/api/feed` avec filtrage
-- Logique de ciblage (note_targets)
-- Composants Vue (FeedList, NoteCard, etc.)
+### ✅ v0.2.0 — Base de Données & TypeScript
+Migrations SQL 001-009, migration frontend TS + Pinia.
 
-### Version 0.5.0 - Sécurité & GDPR 🔒
-- Endpoints GDPR (export/purge)
-- Rate limiting et sanitization XSS
-- Audit logging
+### ✅ v0.3.0 — API Unified Tags & Profils
+CRUD tags, assignation notes↔tags, endpoints profils, stores Pinia.
 
-### Version 0.6.0 - Tests & CI/CD ✅
-- Tests unitaires (Jest, Vitest)
-- Tests E2E (Playwright)
-- CI/CD complet
+### ✅ v0.4.0 — Feed Intelligent & Assignation
+Algorithme de feed ciblé, `GET /api/v1/feed`, `Feed.vue`, `user_tags`.
 
-### Version 1.0.0 - Production Ready 🚀
-- Documentation complète
-- Déploiement production
-- Release
+### ✅ v0.5.0 — Sécurité & GDPR
+Rate limiting, sanitization XSS, `GDPR export/delete`, audit logs, DOMPurify frontend.
 
-**Timeline estimée**: 6-8 semaines avec 1-2 développeurs
+### ✅ v0.6.0 — Tests & CI/CD
+Jest (backend), Vitest (frontend), pipeline GitHub Actions strict (lint → test → couverture → Trivy → Docker Build, matrix Node 18/20), CI fix (PR #18).
+
+### ✅ v0.7.0 — UI/UX & Wireframes
+Dark/Light mode, Loader, Responsive, wireframes ASCII.
+
+### ✅ v1.0.0 — Production Ready
+Docker Swarm, Traefik, secrets, documentation complète.
+
+### 🔄 Reste à faire (post-MVP)
+- **Sécurité avancée**: 2FA TOTP, interface QR Code, vue "Activités récentes"
+- **Audit admin**: endpoint `GET /api/v1/audit`, couverture complète des actions sensibles
+- **Tests E2E**: Playwright (smoke, teacher flow, student flow, GDPR flow)
+- **Couverture**: atteindre 80% backend / 70% frontend dans le CI
+- **v1.1.0**: Notifications temps réel (WebSocket)
+- **v1.2.0**: Recherche full-text PostgreSQL
+- **v1.3.0**: Collaboration (mentions, réactions)
+- **v1.4.0**: Analytics dashboard
 
 Voir [ROADMAP.md](docs/ROADMAP.md) pour le détail complet.
 
@@ -215,33 +226,34 @@ Voir [ROADMAP.md](docs/ROADMAP.md) pour le détail complet.
 
 ### Mesures de Sécurité
 
-✅ **Existantes**:
+✅ **Implémentées**:
 - JWT avec HTTP-only cookies
 - Argon2 pour hashing de mots de passe
-- Helmet pour headers sécurisés
+- Helmet pour headers sécurisés (CSP inclus)
 - CORS configuré
 - Requêtes SQL paramétrées (anti-injection)
 - Validation Zod
-
-🔲 **À implémenter**:
-- Rate limiting (express-rate-limit)
-- Sanitization XSS (DOMPurify, validator)
-- CSRF protection (csurf)
+- Rate limiting (`express-rate-limit`) — API, auth, commentaires
+- Sanitization XSS (`validator` backend, DOMPurify frontend)
 - Audit logging pour actions critiques
-- Scan dépendances (npm audit, Trivy)
+- Scan dépendances en CI (npm audit, Trivy)
+
+🔲 **Reste à implémenter**:
+- 2FA TOTP (obligatoire pour les admins)
+- Stockage sécurisé des secrets (Vault / param store)
+- Interface utilisateur "Activités récentes"
 
 ### Conformité RGPD
 
 ✅ **Documentation** complète dans [GDPR.md](docs/GDPR.md)  
-✅ **Schéma de données** GDPR (migration 004)  
-🔲 **Endpoints** GDPR à implémenter:
-- `GET /api/v1/users/:id/export` - Export données
-- `DELETE /api/v1/users/:id` - Suppression/anonymisation
+✅ **Endpoints GDPR** implémentés :
+- `GET /api/v1/users/:id/export` — Export données utilisateur
+- `DELETE /api/v1/users/:id` — Suppression / anonymisation
 
 **Politique de conservation**:
-- Comptes: durée du contrat + 1 an
-- Audit logs: 6 mois
-- Exports GDPR: 3 mois
+- Comptes : durée du contrat + 1 an
+- Audit logs : 6 mois
+- Exports GDPR : 3 mois
 - Soft delete puis anonymisation à 30 jours
 
 ## 🧪 Tests
@@ -321,7 +333,7 @@ Ou créer manuellement dans l'interface GitHub en copiant le contenu de `GITHUB_
 
 ---
 
-**Version**: 0.2.0-alpha  
-**Dernière mise à jour**: 12 décembre 2024  
-**Statut**: En développement actif 🚧
+**Version**: v1.2.0  
+**Dernière mise à jour**: 1er avril 2026  
+**Statut**: MVP livré — améliorations continues 🚀
 

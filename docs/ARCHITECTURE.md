@@ -1,7 +1,7 @@
 # Architecture Technique - NOTIMATIC MVP
 
 ## Date d'analyse
-**12 décembre 2024**
+**12 décembre 2024 — mis à jour le 1er avril 2026**
 
 ## 1. Détection et Analyse du Backend Existant
 
@@ -93,36 +93,42 @@ CREATE TABLE tags (
 
 Endpoints implémentés dans `backend/src/main.ts`:
 
-**Authentification**
-- `POST /api/v1/auth/login` - Connexion avec JWT (HTTP-only cookie)
-- `POST /api/v1/auth/logout` - Déconnexion
+**Endpoints implémentés dans les modules `backend/src/*/`** (architecture modulaire depuis v0.3.0) :
 
-**Users** (Admin/Technician seulement)
-- `POST /api/v1/users` - Créer utilisateur
-- `GET /api/v1/users` - Lister utilisateurs
+**Authentification** (`auth/`)
+- `POST /api/v1/auth/login`, `POST /api/v1/auth/logout`
+- `POST /api/v1/auth/password-reset/request`, `POST /api/v1/auth/password-reset/complete`
 
-**Notes**
-- `GET /api/v1/notes` - Liste notes (avec RBAC)
-- `POST /api/v1/notes` - Créer note
-- `GET /api/v1/notes/:id` - Détail note
-- `PATCH /api/v1/notes/:id` - Modifier note
-- `DELETE /api/v1/notes/:id` - Supprimer note
+**Users** (`users/`)
+- `POST /api/v1/users`, `GET /api/v1/users`
+- `GET /api/v1/account`, `PATCH /api/v1/account`
+- `GET /api/v1/users/:id/export` (GDPR export)
+- `DELETE /api/v1/users/:id` (soft delete / anonymisation GDPR)
 
-**Comments**
-- `GET /api/v1/notes/:id/comments` - Lister commentaires
-- `POST /api/v1/notes/:id/comments` - Créer commentaire
+**Profiles**
+- `GET /api/v1/profiles/:userId`, `PUT /api/v1/profiles/:userId`, `POST /api/v1/profiles`
+
+**Notes** (`notes/`)
+- `GET /api/v1/notes`, `POST /api/v1/notes`
+- `GET /api/v1/notes/:id`, `PATCH /api/v1/notes/:id`, `DELETE /api/v1/notes/:id`
+- `GET /api/v1/notes/:id/comments`, `POST /api/v1/notes/:id/comments`
+- `POST /api/v1/notes/:id/tags`, `GET /api/v1/notes/:id/tags`
+- `POST /api/v1/notes/:id/reactions`
+
+**Tags** (`tags/`)
+- `GET /api/v1/tags`, `POST /api/v1/tags`
+- `PATCH /api/v1/tags/:id`, `DELETE /api/v1/tags/:id`
+- `GET /api/v1/users/:id/tags`, `POST /api/v1/users/:id/tags`
+
+**Feed** (`feed/`)
+- `GET /api/v1/feed` — filtrage ciblé par tags + user_tags + ownership
+
+**Metadata** (themes & categories)
+- `GET /api/v1/themes`, `POST /api/v1/themes`, `POST /api/v1/themes/apply`
+- `GET /api/v1/categories`, `POST /api/v1/categories`
 
 **Setup**
-- `POST /api/v1/setup` - Créer admin initial (dev only)
-
-**Manques identifiés**:
-- Pas d'endpoints pour themes
-- Pas d'endpoints pour categories
-- Pas d'endpoint feed avec filtrage avancé
-- Pas d'endpoints GDPR
-- Pas de rate limiting
-- Pas de sanitization XSS explicite
-- Pas de logging/audit
+- `POST /api/v1/setup` — créer admin initial (dev only)
 
 ## 2. Décision Technique pour le MVP
 
@@ -142,13 +148,13 @@ Endpoints implémentés dans `backend/src/main.ts`:
 - **TypeORM**: Même problématique, plus lourd à configurer
 
 **Approche retenue**:
-- Fichiers de migration SQL numérotés dans `backend/migrations/`
-- Script de migration simple dans `package.json`
+- Fichiers de migration SQL numérotés dans `backend/migrations/` (001→009)
+- Script de migration `backend/migrate.sh` / `backend/migrate.ps1`
 - Transactions pour intégrité des données
 
 ### 2.2 Choix Frontend
 
-**Décision**: Migrer vers **Vue 3 + TypeScript + Pinia**
+**Décision**: Migrer vers **Vue 3 + TypeScript + Pinia** ✅ **Migration terminée**
 
 **Justification**:
 1. Vue 3 déjà en place, on étend avec TypeScript
@@ -156,12 +162,12 @@ Endpoints implémentés dans `backend/src/main.ts`:
 3. TypeScript = sécurité de type, meilleure DX, moins d'erreurs
 4. Vitest = framework de test natif Vite, très rapide
 
-**Étapes de migration**:
-1. Renommer `main.js` → `main.ts`
-2. Ajouter `tsconfig.json` pour frontend
-3. Installer Pinia, TypeScript, Vitest
-4. Créer les stores Pinia
-5. Migrer composants vers `<script setup lang="ts">`
+**Migration réalisée** (v0.2.0 → v1.2.0):
+1. `main.js` → `main.ts` ✅
+2. `tsconfig.json` configuré ✅
+3. Pinia, TypeScript, Vitest installés ✅
+4. Stores Pinia créés (`auth.ts`, `tag.ts`) ✅
+5. Composants principaux migrés vers `<script setup lang="ts">` ✅
 
 ### 2.3 Architecture Cible
 
@@ -437,5 +443,5 @@ Cette stack est cohérente avec l'existant, moderne, sécurisée et parfaitement
 ---
 
 **Auteur**: GitHub Copilot Agent  
-**Date**: 12 décembre 2024  
-**Version**: 1.0
+**Date**: 12 décembre 2024 — mis à jour le 1er avril 2026  
+**Version**: 2.0
