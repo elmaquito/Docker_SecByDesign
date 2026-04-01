@@ -1,0 +1,44 @@
+# CI override for docker-compose.prod.yml
+# Replaces external Docker Swarm secrets with plain environment variables.
+# Usage: docker compose -f docker-compose.prod.yml -f docker-compose.ci.yml up -d
+
+version: '3.8'
+
+services:
+  backend:
+    secrets: []
+    environment:
+      - DB_HOST=database
+      - DB_USER=notimatic_user
+      - DB_PASSWORD=ci_test_db_password
+      - DB_NAME=notimatic_db
+      - NODE_ENV=test
+      - JWT_SECRET=ci_test_jwt_secret
+
+  database:
+    secrets: []
+    environment:
+      - POSTGRES_USER=notimatic_user
+      - POSTGRES_DB=notimatic_db
+      - POSTGRES_PASSWORD=ci_test_db_password
+
+secrets:
+  db_password:
+    external: false
+    name: ""
+  jwt_secret:
+    external: false
+    name: ""
+
+networks:
+  net-public:
+    driver: bridge
+  net-front:
+    driver: bridge
+    internal: true
+  net-api:
+    driver: bridge
+    internal: true
+  net-data:
+    driver: bridge
+    internal: true
