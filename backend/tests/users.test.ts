@@ -15,8 +15,8 @@ jest.mock('pg', () => {
 
 // Mock auth middleware
 jest.mock('../src/common/middleware', () => ({
-  authenticate: (req: any, _res: Response, next: NextFunction) => {
-    req.user = { id: 1, username: 'admin_test', role: 'admin' };
+  authenticate: (req: Request, _res: Response, next: NextFunction) => {
+    (req as Request & { user: object }).user = { id: 1, username: 'admin_test', role: 'admin' };
     next();
   },
   authorize: (_roles: string[]) => (_req: Request, _res: Response, next: NextFunction) => next(),
@@ -42,7 +42,7 @@ import userRoutes from '../src/users/user.routes';
 
 describe('Users API (unit tests - mocked DB)', () => {
   let app: express.Application;
-  let pool: any;
+  let pool: Pool;
 
   beforeEach(() => {
     pool = new Pool();
@@ -117,7 +117,7 @@ describe('Users API (unit tests - mocked DB)', () => {
     });
 
     it('should return 409 when username already exists', async () => {
-      const dbError: any = new Error('duplicate key');
+      const dbError: Error & { code?: string } = new Error('duplicate key');
       dbError.code = '23505';
       (pool.query as jest.Mock).mockRejectedValueOnce(dbError);
 
@@ -178,8 +178,8 @@ describe('Users API (unit tests - mocked DB)', () => {
 
       const studentApp = express();
       studentApp.use(express.json());
-      studentApp.use((req: any, _res: Response, next: NextFunction) => {
-        req.user = { id: 99, username: 'student_test', role: 'student' };
+      studentApp.use((req: Request, _res: Response, next: NextFunction) => {
+        (req as Request & { user: object }).user = { id: 99, username: 'student_test', role: 'student' };
         next();
       });
       studentApp.put('/me', updateAccount);
@@ -236,8 +236,8 @@ describe('Users API (unit tests - mocked DB)', () => {
 
       const studentApp = express();
       studentApp.use(express.json());
-      studentApp.use((req: any, _res: Response, next: NextFunction) => {
-        req.user = { id: 99, username: 'student_test', role: 'student' };
+      studentApp.use((req: Request, _res: Response, next: NextFunction) => {
+        (req as Request & { user: object }).user = { id: 99, username: 'student_test', role: 'student' };
         next();
       });
       studentApp.get('/:id/export', exportData);

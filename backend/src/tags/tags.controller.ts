@@ -29,7 +29,7 @@ export const createTag = async (req: Request, res: Response) => {
       [type, name, meta || {}, is_default_for_student_view || false, (req as Request & { user: { id: number } }).user.id]
     );
     res.status(201).json(result.rows[0]);
-  } catch (err: any) {
+  } catch (err: unknown) {
     if (err instanceof z.ZodError) return res.status(400).json({ error: err.errors });
     if (err.code === '23505') return res.status(409).json({ error: 'Tag already exists' });
     console.error('Error creating tag:', err);

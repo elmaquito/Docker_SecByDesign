@@ -26,7 +26,7 @@ export const createThemeRouter = (
       const { name, description, color } = req.body;
       const result = await pool.query(
         'INSERT INTO themes (name, description, color, created_by) VALUES ($1, $2, $3, $4) RETURNING *',
-        [name, description, color, (req as any).user.id]
+        [name, description, color, (req as Request & { user: { id: number } }).user.id]
       );
       res.status(201).json(result.rows[0]);
     } catch (err) {

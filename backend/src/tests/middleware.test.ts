@@ -1,4 +1,3 @@
-
 import { authenticate, authorize } from '../common/middleware';
 import { Request, Response, NextFunction } from 'express';
 import { TokenService } from '../auth/token.service';
@@ -50,20 +49,20 @@ describe('Auth Middleware', () => {
 
         await authenticate(req as Request, res as Response, next);
         expect(next).toHaveBeenCalled();
-        expect((req as any).user).toEqual({ id: 1, username: 'test', role: 'student' });
+        expect((req as Request & { user: any }).user).toEqual({ id: 1, username: 'test', role: 'student' });
     });
   });
 
   describe('authorize', () => {
     it('should call next if user has allowed role', () => {
-      (req as any).user = { role: 'admin' };
+      (req as Request & { user: any }).user = { role: 'admin' };
       const middleware = authorize(['admin', 'technician']);
       middleware(req as Request, res as Response, next);
       expect(next).toHaveBeenCalled();
     });
 
     it('should return 403 if user does not have allowed role', () => {
-      (req as any).user = { role: 'student' };
+      (req as Request & { user: any }).user = { role: 'student' };
       const middleware = authorize(['admin', 'technician']);
       middleware(req as Request, res as Response, next);
       expect(res.status).toHaveBeenCalledWith(403);

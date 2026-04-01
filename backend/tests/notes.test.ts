@@ -19,8 +19,8 @@ jest.mock('pg', () => {
 
 // Mock auth middleware
 jest.mock('../src/common/middleware', () => ({
-  authenticate: (req: any, _res: Response, next: NextFunction) => {
-    req.user = { id: 1, username: 'admin_test', role: 'admin' };
+  authenticate: (req: Request, _res: Response, next: NextFunction) => {
+    (req as Request & { user: object }).user = { id: 1, username: 'admin_test', role: 'admin' };
     next();
   },
   authorize: (_roles: string[]) => (_req: Request, _res: Response, next: NextFunction) => next(),
@@ -39,8 +39,8 @@ import noteRoutes from '../src/notes/notes.routes';
 
 describe('Notes API (unit tests - mocked DB)', () => {
   let app: express.Application;
-  let pool: any;
-  let mockClient: any;
+  let pool: Pool;
+  let mockClient: { query: jest.Mock, release: jest.Mock };
 
   beforeEach(() => {
     pool = new Pool();
@@ -254,8 +254,8 @@ describe('Notes API (unit tests - mocked DB)', () => {
       rbacApp.use(express.json());
 
       // Inject student user directly
-      rbacApp.use((req: any, _res: Response, next: NextFunction) => {
-        req.user = { id: 99, username: 'student_test', role: 'student' };
+      rbacApp.use((req: Request, _res: Response, next: NextFunction) => {
+        (req as Request & { user: object }).user = { id: 99, username: 'student_test', role: 'student' };
         next();
       });
 
@@ -276,8 +276,8 @@ describe('Notes API (unit tests - mocked DB)', () => {
 
       const rbacApp = express();
       rbacApp.use(express.json());
-      rbacApp.use((req: any, _res: Response, next: NextFunction) => {
-        req.user = { id: 99, username: 'student_test', role: 'student' };
+      rbacApp.use((req: Request, _res: Response, next: NextFunction) => {
+        (req as Request & { user: object }).user = { id: 99, username: 'student_test', role: 'student' };
         next();
       });
       rbacApp.patch('/notes/:id', updateNote);

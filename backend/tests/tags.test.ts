@@ -15,8 +15,8 @@ jest.mock('pg', () => {
 
 // Mock auth middleware
 jest.mock('../src/common/middleware', () => ({
-  authenticate: (req: any, _res: Response, next: NextFunction) => {
-    req.user = { id: 1, username: 'admin_test', role: 'admin' };
+  authenticate: (req: Request, _res: Response, next: NextFunction) => {
+    (req as Request & { user: object }).user = { id: 1, username: 'admin_test', role: 'admin' };
     next();
   },
   authorize: (_roles: string[]) => (_req: Request, _res: Response, next: NextFunction) => next(),
@@ -28,8 +28,8 @@ import tagRoutes from '../src/tags/tags.routes';
 
 describe('Tags API (unit tests - mocked DB)', () => {
   let app: express.Application;
-  let pool: any;
-  let mockClient: any;
+  let pool: Pool;
+  let mockClient: { query: jest.Mock, release: jest.Mock };
 
   beforeEach(() => {
     pool = new Pool();
@@ -111,7 +111,7 @@ describe('Tags API (unit tests - mocked DB)', () => {
     });
 
     it('should return 409 when tag already exists (duplicate)', async () => {
-      const dbError: any = new Error('duplicate key value violates unique constraint');
+      const dbError: Error & { code?: string } = new Error('duplicate key value violates unique constraint');
       dbError.code = '23505';
       (pool.query as jest.Mock).mockRejectedValueOnce(dbError);
 
@@ -206,8 +206,8 @@ describe('Tags API (unit tests - mocked DB)', () => {
       const studentApp = express();
       studentApp.use(express.json());
       // Override middleware for student
-      studentApp.use('/api/v1/tags', (req: any, _res: Response, next: NextFunction) => {
-        req.user = { id: 99, username: 'student_test', role: 'student' };
+      studentApp.use('/api/v1/tags', (req: Request, _res: Response, next: NextFunction) => {
+        (req as Request & { user: object }).user = { id: 99, username: 'student_test', role: 'student' };
         next();
       });
 
