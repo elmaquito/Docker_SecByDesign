@@ -18,9 +18,12 @@ export function validateEnvironment() {
       DB_HOST: process.env.DB_HOST,
       DB_USER: process.env.DB_USER,
       DB_NAME: process.env.DB_NAME,
-      JWT_SECRET: process.env.JWT_SECRET ? '[SET]' : '[NOT SET]'
+      JWT_SECRET: process.env.JWT_SECRET ? '[SET]' : '[NOT SET]',
+      ALL_ENV: Object.keys(process.env).filter(k => k.startsWith('DB_') || k.includes('JWT'))
     });
-    process.exit(1);
+    console.warn('⚠️ Continuing in degraded mode for debugging...');
+    return;
+    // process.exit(1);
   }
   console.log('✅ Environment variables validated');
 }

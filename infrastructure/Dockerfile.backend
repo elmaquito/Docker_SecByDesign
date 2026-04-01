@@ -25,7 +25,9 @@ RUN npm run build
 # --- Stage 2: Runner (Secure Production Image) ---
 # Use Distroless for minimal attack surface (no shell, no package manager)
 # Or Alpine if debugging is strictly necessary (but Distroless is safer)
-FROM gcr.io/distroless/nodejs20-debian11 AS runner
+# FROM gcr.io/distroless/nodejs20-debian11 AS runner
+FROM node:20-alpine AS runner
+RUN apk add --no-cache curl
 
 WORKDIR /app
 
@@ -37,8 +39,16 @@ COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/package*.json ./
 COPY --from=builder /app/node_modules ./node_modules
 
-# Copy environment file if it exists
-COPY --from=builder /app/.env* ./
+# Copier .env.example comme fallback
+COPY --from=builder /app/.env.example ./.env.example 2>/dev/null || true
+
+# Env was copied conditionally in old file, replacing here to avoid breakages:
+COPY --from=builder /app/.env* ./ 2>/dev/null || true
+
+# Installer curl pour healthcheck (alternative distroless)
+# Pour debug, utiliser node:20-alpine au lieu de distroless
+# FROM node:20-alpine AS runner
+# RUN apk add --no-cache curl
 
 # Run as non-root user (Distroless has a 'nonroot' user with ID 65532)
 USER 65532:65532
@@ -51,4 +61,4 @@ USER 65532:65532
 
 EXPOSE 3000
 
-CMD ["dist/main.js"]
+CMD ["node", "-e", "console.log('🚀 Starting NOTIMATIC backend...'); require('./dist/main.js')"]

@@ -6,8 +6,8 @@ services:
       POSTGRES_USER: user
       POSTGRES_PASSWORD: test_password
       POSTGRES_DB: notimatic_test
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
+      # Ajouter l'init SQL
+      - ../backend/init.sql:/docker-entrypoint-initdb.d/init.sql
     networks:
       - security-net
     healthcheck:
@@ -27,7 +27,8 @@ services:
       DB_NAME: notimatic_test
       JWT_SECRET: test_jwt_secret
       REFRESH_TOKEN_SECRET: test_refresh_secret
-      NODE_ENV: test
+      # Ajout pour debug
+      DEBUG: "*"
     depends_on:
       database:
         condition: service_healthy

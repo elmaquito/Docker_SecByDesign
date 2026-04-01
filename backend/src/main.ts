@@ -14,10 +14,10 @@ process.on('unhandledRejection', (reason, promise) => {
   process.exit(1);
 });
 
-// Validate environment early 
-validateEnvironment();
+// Validate environment early
+// validateEnvironment(); // Moved inside startServer
 
-import { pool } from './config/database';
+import { pool, testDatabaseConnection } from './config/database';
 import { apiLimiter, sanitizeInput } from './common/middleware';
 import authRoutes from './auth/auth.routes';
 import userRoutes from './users/user.routes';
@@ -92,10 +92,40 @@ app.use((err: Error, _req: express.Request, res: express.Response, _next: expres
 });
 
 // --- Start Server ---
-if (process.env.NODE_ENV !== 'test') {
-  app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT} in ${NODE_ENV} mode`);
-  });
+async function startServer() {
+  try {
+    // Validate environment first
+    validateEnvironment();
+    
+    // Test database connection with retries
+    let dbConnected = false;
+    for (let i = 0; i < 10; i++) {
+      dbConnected = await testDatabaseConnection();
+      if (dbConnected) break;
+      await new Promise(resolve => setTimeout(resolve, 5000));
+    }
+    
+    if (!dbConnected) {
+      console.error('❌ Failed to connect to database after 10 retries');
+      process.exit(1);
+    }
+
+    // Start the server
+    if (process.env.NODE_ENV !== 'test') {
+      app.listen(PORT, () => {
+        console.log(`✅ Server running on port ${PORT} in ${NODE_ENV} mode`);
+      });
+    }
+  } catch (error) {
+    console.error('❌ Failed to start server:', error);
+    process.exit(1);
+  }
 }
+
+// Call the async startup function
+startServer().catch(error => {
+  console.error('❌ Startup error:', error);
+  process.exit(1);
+});
 
 export default app;
