@@ -184,11 +184,8 @@ docker stack deploy -c infrastructure/docker-compose.prod.yml notimatic
 
 | Document | Contenu |
 |----------|---------|
-| [GDPR.md](docs/GDPR.md) | Conformité RGPD : données, droits, procédures |
-| [SECURITY_ARCHITECTURE.md](docs/SECURITY_ARCHITECTURE.md) | Architecture de sécurité |
-| [THREAT_MODEL_AND_PLAYBOOKS.md](docs/THREAT_MODEL_AND_PLAYBOOKS.md) | Modèle de menaces + playbooks |
-| [ZERO_TRUST.md](docs/ZERO_TRUST.md) | Implémentation Zero Trust |
-| [SECURITY_DEPLOYMENT_GUIDE.md](docs/SECURITY_DEPLOYMENT_GUIDE.md) | Guide de déploiement sécurisé |
+| [SECURITY.md](docs/SECURITY.md) | Architecture auth Zero-Trust, modèle de menaces STRIDE, checklist déploiement, réponse aux incidents |
+| [GDPR.md](docs/GDPR.md) | Conformité RGPD : données collectées, droits, procédures d'exercice |
 
 ### Guides Utilisateur
 
