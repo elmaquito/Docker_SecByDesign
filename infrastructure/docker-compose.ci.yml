@@ -2,8 +2,6 @@
 # Replaces external Docker Swarm secrets with plain environment variables.
 # Usage: docker compose -f docker-compose.prod.yml -f docker-compose.ci.yml up -d
 
-version: '3.8'
-
 services:
   backend:
     secrets: []
@@ -22,13 +20,7 @@ services:
       - POSTGRES_DB=notimatic_db
       - POSTGRES_PASSWORD=ci_test_db_password
 
-secrets:
-  db_password:
-    external: false
-    name: ""
-  jwt_secret:
-    external: false
-    name: ""
+secrets: {}
 
 networks:
   net-public:

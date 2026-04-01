@@ -2,9 +2,9 @@ name: CI - Strict
 
 on:
   push:
-    branches: [ main, develop, defaut, ci-fix, 'feature/**' ]
+    branches: [ main, develop, default, ci-fix, 'feature/**' ]
   pull_request:
-    branches: [ main, develop, defaut, ci-fix ]
+    branches: [ main, develop, default, ci-fix ]
   workflow_dispatch: {}
 
 permissions:
