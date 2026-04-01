@@ -252,42 +252,18 @@ jobs:
         working-directory: tests/e2e
       - name: Start services (docker-compose)
         run: |
-          docker compose -f infrastructure/docker-compose.security-test.yml up -d
-      - name: Show container logs for debugging
-        if: failure()
-        run: |
-          echo "=== Database logs ==="
-          docker compose -f infrastructure/docker-compose.security-test.yml logs database
-          echo "=== Backend logs ==="
-          docker compose -f infrastructure/docker-compose.security-test.yml logs backend
+          docker compose -f infrastructure/docker-compose.dev.yml up -d
+          
       - name: Wait for services to be ready
         run: |
-          echo "Waiting for database to be ready..."
-          for i in {1..30}; do
-            if docker compose -f infrastructure/docker-compose.security-test.yml exec database pg_isready -U user -d notimatic_test; then
-              echo "✅ Database is ready"
-              break
-            fi
-            echo "Waiting for database... ($i/30)"
-            sleep 2
-          done
+          timeout 60 bash -c 'until docker compose -f infrastructure/docker-compose.dev.yml ps | grep -q "healthy\|running"; do sleep 2; done'
           
-          echo "Waiting for backend to be ready..."
-          for i in {1..60}; do
-            if curl -sf http://localhost:3001/health; then
-              echo "✅ Backend is ready"
-              break
-            fi
-            echo "Waiting for backend... ($i/60)"
-            sleep 5
-          done
+      - name: Check service health
+        if: failure()
+        run: |
+          docker compose -f infrastructure/docker-compose.dev.yml ps
+          docker compose -f infrastructure/docker-compose.dev.yml logs
           
-          # Final health check
-          curl -sf http://localhost:3001/health || {
-            echo "❌ Backend failed to start"
-            docker compose -f infrastructure/docker-compose.security-test.yml logs backend
-            exit 1
-          }
       - name: Run Playwright smoke tests
         working-directory: tests/e2e
         run: npx playwright test --config=playwright.config.ts --project=chromium --reporter=list
