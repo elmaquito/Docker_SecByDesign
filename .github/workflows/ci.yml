@@ -58,6 +58,8 @@ jobs:
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
+        ports:
+          - 5432:5432
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -76,20 +78,20 @@ jobs:
         env:
           PGPASSWORD: test_password
         run: |
-          # Wait for postgres service hostname to be ready
+          # Wait for postgres service to be ready
           for i in {1..30}; do
-            pg_isready -h postgres -U user && break
+            pg_isready -h 127.0.0.1 -U user && break
             echo "Waiting for postgres..."
             sleep 1
           done
           # Apply init SQL
-          psql -h postgres -U user -d notimatic_test -f backend/init.sql
+          psql -h 127.0.0.1 -U user -d notimatic_test -f backend/init.sql
           # Run migrations (best effort)
           bash backend/migrate.sh || echo "Migration script returned non-zero (check logs)"
       - name: Run tests with coverage
         working-directory: backend
         env:
-          DB_HOST: postgres
+          DB_HOST: 127.0.0.1
           DB_USER: user
           DB_PASSWORD: test_password
           DB_NAME: notimatic_test
