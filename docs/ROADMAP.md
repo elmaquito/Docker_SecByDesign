@@ -452,6 +452,7 @@ Finaliser pour production.
 - [ ] README.md complet
   - Instructions installation
   - Guide de démarrage
+  - Guide d'exploitation
   - Guide de développement
   - Guide de contribution
 - [ ] API Documentation (Swagger/OpenAPI optionnel)
