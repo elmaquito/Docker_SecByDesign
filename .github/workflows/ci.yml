@@ -295,7 +295,7 @@ jobs:
         uses: actions/checkout@v4
       - name: Validate documentation presence
         run: |
-          test -f docs/SECURITY_ARCHITECTURE.md && test -f docs/SECURITY_TESTING_PLAN.md && test -f docs/ROADMAP.md
+          test -f docs/ARCHITECTURE.md && test -f docs/SECURITY.md && test -f docs/ROADMAP.md
       - name: Validate .env.example
         run: test -f backend/.env.example && test -f frontend/.env.example
       - name: Validate checklist

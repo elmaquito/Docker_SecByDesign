@@ -61,10 +61,10 @@ services:
       - net-dev
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:3000/health || exit 1"]
-      interval: 30s
+      interval: 10s
       timeout: 10s
-      retries: 3
-      start_period: 40s
+      retries: 6
+      start_period: 120s
     # labels:
     #   - "traefik.http.routers.api.rule=Host(`api.localhost`)"
 
