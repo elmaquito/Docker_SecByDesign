@@ -6,11 +6,6 @@ import { TokenService } from './token.service';
 import { loginSchema, passwordResetRequestSchema, passwordResetCompleteSchema } from './auth.schema';
 import { generateToken, hashToken, sendEmail } from '../common/utils';
 import { NODE_ENV } from '../config/env';
-import { User } from '../common/types';
-
-interface UserRequest extends Request {
-  user: User;
-}
 
 const tokenService = new TokenService();
 
@@ -76,7 +71,7 @@ export const login = async (req: Request, res: Response) => {
   }
 };
 
-export const logout = async (req: UserRequest, res: Response) => {
+export const logout = async (req: Request, res: Response) => {
   try {
     const refreshToken = req.cookies['refresh_token'];
     
@@ -89,7 +84,7 @@ export const logout = async (req: UserRequest, res: Response) => {
     res.clearCookie('auth_token');
     res.clearCookie('refresh_token');
     
-    console.log(`[Logout] User logged out: ${req.user.username}`);
+    console.log(`[Logout] User logged out: ${req.user?.username ?? 'unknown'}`);
     res.json({ message: 'Logged out' });
   } catch (err) {
     console.error('Logout error:', err);
@@ -171,8 +166,11 @@ export const refresh = async (req: Request, res: Response) => {
   }
 };
 
-export const revoke = async (req: UserRequest, res: Response) => {
+export const revoke = async (req: Request, res: Response) => {
   try {
+    if (!req.user) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
     await tokenService.revokeAllUserSessions(req.user.id);
     
     // Clear cookies
