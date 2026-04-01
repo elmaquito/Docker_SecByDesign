@@ -103,5 +103,73 @@ describe('Tags API (unit tests - mocked DB)', () => {
 
       expect(res.status).toBe(400);
     });
+
+    it('should return 409 when tag already exists', async () => {
+      const err: any = new Error('Duplicate'); err.code = '23505';
+      (pool.query as jest.Mock).mockRejectedValueOnce(err);
+      const res = await request(app).post('/api/v1/tags').send({ type: 'classe', name: 'Dupe' });
+      expect(res.status).toBe(409);
+    });
+
+    it('should return 500 on unexpected DB error', async () => {
+      (pool.query as jest.Mock).mockRejectedValueOnce(new Error('DB error'));
+      const res = await request(app).post('/api/v1/tags').send({ type: 'classe', name: 'ErrorTag' });
+      expect(res.status).toBe(500);
+    });
+  });
+
+  // -------------------------
+  // PATCH /api/v1/tags/:id
+  // -------------------------
+  describe('PATCH /api/v1/tags/:id', () => {
+    it('should update a tag name', async () => {
+      const updated = { id: 1, type: 'classe', name: 'Renamed', meta: {} };
+      (pool.query as jest.Mock).mockResolvedValueOnce({ rows: [updated] });
+      const res = await request(app).patch('/api/v1/tags/1').send({ name: 'Renamed' });
+      expect(res.status).toBe(200);
+      expect(res.body).toHaveProperty('name', 'Renamed');
+    });
+
+    it('should return 200 with no-change message when no fields given', async () => {
+      const res = await request(app).patch('/api/v1/tags/1').send({});
+      expect(res.status).toBe(200);
+      expect(res.body).toHaveProperty('message', 'No changes');
+    });
+
+    it('should return 404 when tag not found', async () => {
+      (pool.query as jest.Mock).mockResolvedValueOnce({ rows: [] });
+      const res = await request(app).patch('/api/v1/tags/999').send({ name: 'Ghost' });
+      expect(res.status).toBe(404);
+    });
+
+    it('should return 500 on DB error', async () => {
+      (pool.query as jest.Mock).mockRejectedValueOnce(new Error('DB error'));
+      const res = await request(app).patch('/api/v1/tags/1').send({ name: 'Fail' });
+      expect(res.status).toBe(500);
+    });
+  });
+
+  // -------------------------
+  // DELETE /api/v1/tags/:id
+  // -------------------------
+  describe('DELETE /api/v1/tags/:id', () => {
+    it('should delete a tag', async () => {
+      (pool.query as jest.Mock).mockResolvedValueOnce({ rows: [{ id: 1 }] });
+      const res = await request(app).delete('/api/v1/tags/1');
+      expect(res.status).toBe(200);
+      expect(res.body).toHaveProperty('message', 'Deleted');
+    });
+
+    it('should return 404 when tag not found', async () => {
+      (pool.query as jest.Mock).mockResolvedValueOnce({ rows: [] });
+      const res = await request(app).delete('/api/v1/tags/999');
+      expect(res.status).toBe(404);
+    });
+
+    it('should return 500 on DB error', async () => {
+      (pool.query as jest.Mock).mockRejectedValueOnce(new Error('DB error'));
+      const res = await request(app).delete('/api/v1/tags/1');
+      expect(res.status).toBe(500);
+    });
   });
 });

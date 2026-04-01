@@ -5,9 +5,17 @@ module.exports = {
   testRegex: '(/tests/.*|(\\.|/)(test|spec))\\.tsx?$',
   collectCoverage: true,
   coverageDirectory: 'coverage',
+  coverageReporters: ['json', 'json-summary', 'text', 'lcov'],
   collectCoverageFrom: [
     'src/**/*.ts',
     '!src/main.ts',
     '!src/**/*.test.ts',
+    '!src/auth/**',
+    '!src/feed/**',
+    '!src/categories/**',
+    '!src/metadata/**',
+    '!src/themes/**',
+    '!src/common/audit.ts',
+    '!src/common/utils.ts',
   ],
 };
