@@ -5,7 +5,6 @@ import validator from 'validator';
 import { NODE_ENV } from '../config/env';
 import { pool } from '../config/database';
 import { TokenService } from '../auth/token.service';
-import { Role } from './types';
 
 import { User } from './types';
 
