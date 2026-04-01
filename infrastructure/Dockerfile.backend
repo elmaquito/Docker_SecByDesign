@@ -14,7 +14,7 @@ COPY package*.json ./
 
 # Install dependencies (using npm install for initial bootstrap as no lockfile exists yet)
 # In production with lockfile, use: RUN npm ci --ignore-scripts
-RUN npm install --build-from-source=argon2 || { echo "npm install failed"; cat /root/.npm/_logs/*-debug.log; exit 1; }
+RUN npm install
 
 # Copy source code
 COPY . .
