@@ -183,8 +183,8 @@ jobs:
         uses: actions/checkout@v4
       - name: Build Docker images
         run: |
-          docker build -t notimatic-backend:ci -f backend/Dockerfile backend
-          docker build -t notimatic-frontend:ci -f frontend/Dockerfile frontend
+          docker build -t notimatic-backend:ci -f infrastructure/Dockerfile.backend backend
+          docker build -t notimatic-frontend:ci -f infrastructure/Dockerfile.frontend frontend
       - name: Run Trivy scan on backend image
         uses: aquasecurity/trivy-action@v0.19.0
         with:
@@ -205,8 +205,8 @@ jobs:
         uses: actions/checkout@v4
       - name: Build multi-stage images
         run: |
-          docker build -t notimatic-backend:latest -f backend/Dockerfile backend
-          docker build -t notimatic-frontend:latest -f frontend/Dockerfile frontend
+          docker build -t notimatic-backend:latest -f infrastructure/Dockerfile.backend backend
+          docker build -t notimatic-frontend:latest -f infrastructure/Dockerfile.frontend frontend
       - name: Save images (optional)
         run: |
           docker save notimatic-backend:latest -o notimatic-backend.tar || true
