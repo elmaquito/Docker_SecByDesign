@@ -1,0 +1,301 @@
+# NOTIMATIC — Docker Compose Complet (Référence Unifiée)
+#
+# Ce fichier est une référence documentée combinant les configurations
+# dev et prod en un seul document pédagogique.
+#
+# Pour l'utilisation réelle :
+#   - Développement : infrastructure/docker-compose.dev.yml
+#   - Production    : infrastructure/docker-compose.prod.yml
+#   - Tests CI/CD   : infrastructure/docker-compose.test.yml
+#
+# Date : 2026-04-01
+# Version projet : v1.2.0
+# Commit : d43a8a27e16b58aad6e0639d1f329fed295f95f9
+
+# ==============================================================================
+# CONFIGURATION DÉVELOPPEMENT
+# Démarrage : docker compose -f infrastructure/docker-compose.dev.yml up --build
+# ==============================================================================
+#
+# version: '3.8'
+#
+# services:
+#
+#   frontend:
+#     build:
+#       context: ../frontend
+#       dockerfile: ../infrastructure/Dockerfile.frontend
+#       target: builder          # Stage builder = Node.js + Vite (hot-reload)
+#     command: npm run dev
+#     volumes:
+#       - ../frontend:/app        # Mount du code source pour hot-reload
+#       - /app/node_modules       # node_modules du conteneur (ne pas écraser)
+#     ports:
+#       - "5173:5173"             # Port Vite dev server
+#     networks:
+#       - net-dev
+#     # Accès : http://localhost:5173
+#
+#   backend:
+#     build:
+#       context: ../backend
+#       dockerfile: ../infrastructure/Dockerfile.backend
+#       target: builder          # Stage builder = Node.js + ts-node-dev
+#     command: npm run start:dev
+#     volumes:
+#       - ../backend:/app
+#       - /app/node_modules
+#     ports:
+#       - "3001:3000"             # 3001 externe pour éviter conflit avec Obsidian
+#     environment:
+#       - DB_HOST=database
+#       - DB_PASSWORD=dev_secret_password
+#     networks:
+#       - net-dev
+#     # API : http://localhost:3001/api/v1
+#
+#   database:
+#     image: postgres:15-alpine
+#     environment:
+#       - POSTGRES_USER=user
+#       - POSTGRES_PASSWORD=dev_secret_password
+#       - POSTGRES_DB=notimatic_dev
+#     ports:
+#       - "5432:5432"             # Exposé pour outils (DBeaver, pgAdmin)
+#     volumes:
+#       - ../backend/init.sql:/docker-entrypoint-initdb.d/init.sql
+#     networks:
+#       - net-dev
+#
+# networks:
+#   net-dev:
+
+# ==============================================================================
+# CONFIGURATION PRODUCTION (Docker Swarm)
+# Démarrage : docker stack deploy -c infrastructure/docker-compose.prod.yml notimatic
+#
+# Prérequis :
+#   docker swarm init
+#   printf "password" | docker secret create db_password -
+#   printf "jwt64chars" | docker secret create jwt_secret -
+# ==============================================================================
+
+version: '3.8'
+
+services:
+
+  # ----------------------------------------------------------------------------
+  # TRAEFIK — Reverse Proxy / Edge / TLS
+  # Rôle : terminaison TLS, redirection HTTP→HTTPS, middlewares de sécurité
+  # Sécurité : socket Docker read-only, no-new-privileges, limites ressources
+  # ----------------------------------------------------------------------------
+  proxy:
+    image: traefik:v2.10
+    command:
+      # Provider Docker (auto-découverte des services labellisés)
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"  # Opt-in : seuls les services labellisés
+      - "--providers.docker.swarmMode=true"
+      # Points d'entrée réseau
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.websecure.address=:443"
+      # Redirection HTTP → HTTPS systématique
+      - "--entrypoints.web.http.redirections.entryPoint.to=websecure"
+      - "--entrypoints.web.http.redirections.entryPoint.scheme=https"
+      # Résolveur de certificats TLS (Let's Encrypt)
+      - "--certificatesresolvers.myresolver.acme.email=security@notimatic.com"
+      - "--certificatesresolvers.myresolver.acme.storage=/letsencrypt/acme.json"
+      - "--certificatesresolvers.myresolver.acme.httpchallenge.entrypoint=web"
+      # Logs JSON structurés
+      - "--log.format=json"
+      - "--log.level=INFO"
+      # Dashboard désactivé en production
+      - "--api.dashboard=false"
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      # Socket Docker en READ-ONLY (Traefik ne peut que lire, pas écrire)
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+      # Configuration dynamique (TLS, middlewares)
+      - "./config/traefik:/etc/traefik"
+      # Certificats Let's Encrypt persistants
+      - "traefik-certificates:/letsencrypt"
+    networks:
+      - net-public
+      - net-front
+      - net-api
+    security_opt:
+      - no-new-privileges:true   # Empêche l'élévation de privilèges
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+
+  # ----------------------------------------------------------------------------
+  # FRONTEND — Nginx Alpine (assets statiques Vue 3)
+  # Rôle : servir les fichiers HTML/CSS/JS compilés par Vite
+  # Sécurité : read_only, no-new-privileges, utilisateur nginx (non-root)
+  # Scaling : 2 replicas pour la haute disponibilité
+  # ----------------------------------------------------------------------------
+  frontend:
+    build:
+      context: ../frontend
+      dockerfile: ../infrastructure/Dockerfile.frontend
+    networks:
+      - net-front               # Seulement net-front : pas d'accès à net-api ni net-data
+    security_opt:
+      - no-new-privileges:true
+    read_only: true             # Conteneur en lecture seule (immutable)
+    tmpfs:
+      - /var/cache/nginx        # Writable uniquement en RAM (cache)
+      - /var/run                # PID file de Nginx
+    deploy:
+      replicas: 2               # 2 instances pour la haute disponibilité
+      update_config:
+        parallelism: 1          # Mise à jour une instance à la fois (rolling update)
+        delay: 10s
+      labels:
+        - "traefik.enable=true"
+        # Routing : requêtes vers notimatic.com → ce service
+        - "traefik.http.routers.front.rule=Host(`notimatic.com`)"
+        - "traefik.http.routers.front.entrypoints=websecure"
+        - "traefik.http.routers.front.tls.certresolver=myresolver"
+        # Middleware de sécurité headers (défini dans dynamic_conf.yml)
+        - "traefik.http.routers.front.middlewares=sec-headers"
+        - "traefik.http.services.front.loadbalancer.server.port=80"
+
+  # ----------------------------------------------------------------------------
+  # BACKEND — Node.js 20 / Express / TypeScript (image Distroless)
+  # Rôle : API REST — authentification, notes, tags, feed, RGPD
+  # Sécurité : Distroless (pas de shell), utilisateur 65532, read_only, secrets
+  # Scaling : 3 replicas pour la haute disponibilité et la résilience
+  # ----------------------------------------------------------------------------
+  backend:
+    build:
+      context: ../backend
+      dockerfile: ../infrastructure/Dockerfile.backend
+    networks:
+      - net-api                 # Communication avec Traefik
+      - net-data                # Communication avec PostgreSQL (chiffrée)
+    secrets:
+      - db_password             # Mot de passe BDD (Docker Swarm secret)
+      - jwt_secret              # Secret JWT (Docker Swarm secret)
+    environment:
+      - DB_HOST=database
+      - DB_USER=notimatic_user
+      # Le secret est monté comme fichier — lire via DB_PASSWORD_FILE
+      - DB_PASSWORD_FILE=/run/secrets/db_password
+      - DB_NAME=notimatic_db
+      - NODE_ENV=production
+      - CORS_ORIGINS=https://notimatic.com
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    user: "65532"               # Utilisateur "nonroot" Distroless — jamais root
+    deploy:
+      replicas: 3               # 3 instances pour la résilience
+      update_config:
+        parallelism: 1
+        delay: 10s
+        failure_action: rollback
+      labels:
+        - "traefik.enable=true"
+        # Routing : requêtes vers api.notimatic.com → ce service
+        - "traefik.http.routers.api.rule=Host(`api.notimatic.com`)"
+        - "traefik.http.routers.api.entrypoints=websecure"
+        - "traefik.http.routers.api.tls.certresolver=myresolver"
+        # Middlewares : rate-limit + headers de sécurité
+        - "traefik.http.routers.api.middlewares=rate-limit,sec-headers"
+        - "traefik.http.services.api.loadbalancer.server.port=3000"
+        # Sticky sessions (optionnel — JWT stateless donc non requis)
+        # - "traefik.http.services.api.loadbalancer.sticky.cookie=true"
+
+  # ----------------------------------------------------------------------------
+  # DATABASE — PostgreSQL 15 Alpine
+  # Rôle : stockage persistant des données (18 tables)
+  # Sécurité : réseau net-data uniquement, secret monté en fichier, volume persistant
+  # Note : 1 seule instance (contrainte manager pour la persistance du volume)
+  # ----------------------------------------------------------------------------
+  database:
+    image: postgres:15-alpine
+    networks:
+      - net-data                # UNIQUEMENT net-data : pas d'accès depuis internet
+    secrets:
+      - db_password
+    environment:
+      - POSTGRES_USER=notimatic_user
+      - POSTGRES_DB=notimatic_db
+      - POSTGRES_PASSWORD_FILE=/run/secrets/db_password  # Lit depuis le secret
+    volumes:
+      - db-data:/var/lib/postgresql/data  # Volume persistant
+    deploy:
+      placement:
+        constraints:
+          - node.role == manager  # La BDD reste sur le nœud manager (volume local)
+      resources:
+        limits:
+          memory: 1G
+
+# ==============================================================================
+# SECRETS (Docker Swarm)
+# Créer via :
+#   printf "monmotdepasse" | docker secret create db_password -
+#   printf "$(openssl rand -hex 64)" | docker secret create jwt_secret -
+# ==============================================================================
+secrets:
+  db_password:
+    external: true   # Géré externalement via docker secret create
+  jwt_secret:
+    external: true
+
+# ==============================================================================
+# RÉSEAUX (overlay Docker Swarm)
+#
+# Architecture réseau :
+#   Internet → net-public → Traefik
+#              net-front (internal) → Frontend
+#              net-api (internal) → Backend
+#              net-data (internal, encrypted) → PostgreSQL
+#
+# "internal: true" = pas d'accès internet depuis ce réseau
+# "encrypted: true" = trafic chiffré entre nœuds Swarm
+# ==============================================================================
+networks:
+  net-public:
+    driver: overlay
+    # Seul Traefik est attaché à ce réseau — point d'entrée unique
+
+  net-front:
+    driver: overlay
+    internal: true              # Frontend isolé d'internet
+    # Traefik ↔ Frontend uniquement
+
+  net-api:
+    driver: overlay
+    internal: true              # Backend isolé d'internet
+    # Traefik ↔ Backend uniquement
+
+  net-data:
+    driver: overlay
+    internal: true              # BDD isolée d'internet ET du frontend
+    driver_opts:
+      encrypted: "true"        # Chiffrement du trafic inter-nœuds Swarm (AES-GCM)
+    # Backend ↔ PostgreSQL uniquement
+
+# ==============================================================================
+# VOLUMES
+# ==============================================================================
+volumes:
+  traefik-certificates:         # Certificats Let's Encrypt (persistants)
+    driver: local
+
+  db-data:                      # Données PostgreSQL (persistantes)
+    driver: local
+    # En production multi-nœuds, utiliser un volume NFS ou cloud storage :
+    # driver: local
+    # driver_opts:
+    #   type: nfs
+    #   o: addr=nfs-server,rw
+    #   device: ":/data/notimatic-db"

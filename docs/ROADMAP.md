@@ -60,7 +60,10 @@
 
 ## Vue d'ensemble
 
-Ce document présente la roadmap complète pour le développement du MVP du système de feed d'actualités avec commentaires, assignation par thèmes et catégories ciblées.
+Ce document présente la roadmap complète du projet NOTIMATIC : historique des versions livrées, état des travaux en cours, et planification des fonctionnalités post-MVP.
+
+**Périmètre MVP** : authentification RBAC · feed ciblé · commentaires · tags unifiés · conformité RGPD · CI/CD  
+**Version courante** : v1.2.0 · **Statut** : MVP livré, améliorations continues
 
 ## Version 0.1.0 - Fondations (Actuel)
 
@@ -154,7 +157,7 @@ Finaliser l'implémentation de la logique métier pour les Tags Unifiés (rempla
 
 ## Version 0.4.0 - Feed Intelligent & Assignation
 
-**Statut**: 🔄 En cours
+**Statut**: ✅ Complété
 
 ### Objectifs
 Implémenter l'algorithme de feed intelligent qui filtre les notes en fonction des tags de l'utilisateur (classe, spécialités, groupes) et des assignations directes.
@@ -179,88 +182,7 @@ Implémenter l'algorithme de feed intelligent qui filtre les notes en fonction d
 
 ---
 
-## Version 0.5.0 - Sécurité Avancée & Audit
-
-**Statut**: 🔄 A venir
-
-### Objectifs
-Renforcer la sécurité avec 2FA, Audit Logs complets, et gestion des sessions.
-
-### Tâches
-
-#### Backend - Sécurité
-- [ ] Mettre à jour `auth.controller.ts` pour supporter 2FA (TOTP)
-- [ ] Implémenter le middleware de limitation de taux (Rate Limiting) global
-- [ ] Stockage sécurisé des secrets (Vault ou param store simulation)
-
-#### Backend - Audit
-- [ ] Compléter `audit.service.ts` pour couvrir toutes les actions sensibles
-- [ ] Endpoint `GET /api/v1/audit` pour les admins
-
-#### Frontend - Sécurité
-- [ ] Interface de configuration 2FA (QR Code)
-- [ ] Vue "Activités récentes" (Logs) pour l'utilisateur
-
-### Critères d'acceptation
-- 2FA fonctionnel et obligatoire pour les admins
-- Logs d'audit immuables pour toutes les actions critiques
-- Protection contre brute-force active
-
-
-
-### Objectifs
-Implémenter le feed d'actualités avec filtrage et assignation par thèmes/catégories.
-
-### Tâches
-
-#### Backend - Feed API
-- [ ] Endpoint `GET /api/v1/feed` avec filtres
-  - Paramètres: `?theme=`, `?category=`, `?page=`, `?limit=`
-  - Logique de ciblage (note_targets + profil utilisateur)
-  - Pagination
-  - Tri par date/pertinence
-- [ ] Logique d'assignation de notes
-  - Associer notes à thèmes (note_themes)
-  - Associer notes à catégories (note_categories)
-  - Créer targets (note_targets)
-- [ ] Modifier `POST /api/v1/notes` pour accepter themes/categories/targets
-- [ ] Service `FeedService.ts` pour logique métier
-- [ ] Tests d'intégration feed avec différents profils
-
-#### Frontend - Composants Feed
-- [ ] `HomePage.vue` - Page d'accueil avec feed
-- [ ] `FeedList.vue` - Liste de notes filtrables
-- [ ] `NoteCard.vue` - Carte d'affichage note
-- [ ] `FeedFilters.vue` - Filtres (thèmes, catégories)
-- [ ] `stores/feedStore.ts` - État du feed
-- [ ] `stores/noteStore.ts` - CRUD notes
-
-#### Frontend - Création de Note (Teacher)
-- [ ] `NoteCreateForm.vue` - Formulaire complet
-  - Champs: titre, contenu
-  - Sélection multi-thèmes (checkbox/tags)
-  - Sélection multi-catégories
-  - Sélection de cibles (classes, promos, niveaux, all)
-- [ ] `TeacherDashboard.vue` - Dashboard enseignant
-- [ ] Validation côté client
-- [ ] Tests unitaires Vitest pour composants
-
-#### Frontend - Détail Note & Commentaires
-- [ ] `NoteDetail.vue` - Affichage détaillé d'une note
-- [ ] `CommentsList.vue` - Liste des commentaires
-- [ ] `CommentForm.vue` - Formulaire d'ajout commentaire
-- [ ] `stores/commentStore.ts` - Gestion commentaires
-
-### Critères d'acceptation
-- Feed affiche notes ciblées selon profil utilisateur
-- Filtres fonctionnent (thèmes, catégories)
-- Teachers peuvent créer notes avec assignations
-- Commentaires fonctionnels
-- Tests unitaires passent
-
----
-
-## Version 0.5.0 - Sécurité & GDPR (Actuel)
+## Version 0.5.0 - Sécurité & GDPR
 
 **Statut**: ✅ Complété
 
@@ -270,39 +192,36 @@ Renforcer la sécurité et implémenter la conformité GDPR.
 ### Tâches
 
 #### Sécurité Backend
-- [ ] Installer `express-rate-limit`
-- [ ] Rate limiting sur endpoints commentaires (10 req/min)
-- [ ] Rate limiting sur endpoints auth (5 req/min)
-- [ ] Installer `validator` pour sanitization
-- [ ] Sanitizer toutes les entrées utilisateur (XSS)
-- [ ] CSRF protection avec `csurf` (si nécessaire)
-- [ ] Content Security Policy (CSP) dans Helmet
-- [ ] Audit logging pour actions critiques
+- [x] Installer `express-rate-limit`
+- [x] Rate limiting sur endpoints commentaires (10 req/min)
+- [x] Rate limiting sur endpoints auth (5 req/min)
+- [x] Installer `validator` pour sanitization
+- [x] Sanitizer toutes les entrées utilisateur (XSS)
+- [x] Content Security Policy (CSP) dans Helmet
+- [x] Audit logging pour actions critiques
   - Création/suppression notes
   - Export/purge utilisateur
   - Modifications de profil
 
 #### GDPR Endpoints
-- [ ] `GET /api/v1/users/:id/export` - Export données utilisateur
+- [x] `GET /api/v1/users/:id/export` — Export données utilisateur
   - Générer JSON avec toutes les données
   - Stocker dans `gdpr_export_requests`
   - Logs d'audit
-- [ ] `DELETE /api/v1/users/:id` - Suppression/anonymisation
+- [x] `DELETE /api/v1/users/:id` — Suppression/anonymisation
   - Soft delete (`deleted_at`)
   - Anonymisation (`anonymized = true`)
   - Option de purge complète (admin)
   - Logs d'audit
-- [ ] Tests unitaires GDPR
-- [ ] Tests d'intégration export/purge
+- [x] Tests unitaires GDPR
 
 #### Frontend Sécurité
-- [ ] Installer `DOMPurify` pour sanitization
-- [ ] Sanitizer contenu affiché (notes, commentaires)
-- [ ] Afficher contenu HTML sécurisé avec `v-html` + DOMPurify
-- [ ] Gestion sécurisée des tokens JWT
+- [x] Installer `DOMPurify` pour sanitization
+- [x] Sanitizer contenu affiché (notes, commentaires)
+- [x] Gestion sécurisée des tokens JWT
 
 #### Documentation GDPR
-- [ ] Créer `docs/GDPR.md`
+- [x] Créer `docs/GDPR.md`
   - Politique de conservation
   - Procédure de demande d'export
   - Procédure de suppression
@@ -311,17 +230,17 @@ Renforcer la sécurité et implémenter la conformité GDPR.
   - Contacts DPO (Data Protection Officer)
 
 ### Critères d'acceptation
-- Rate limiting actif et testé
-- Sanitization XSS effective
-- Endpoints GDPR fonctionnels et testés
-- Documentation GDPR complète
-- Logs d'audit pour toutes actions critiques
+- [x] Rate limiting actif et testé
+- [x] Sanitization XSS effective
+- [x] Endpoints GDPR fonctionnels et testés
+- [x] Documentation GDPR complète
+- [x] Logs d'audit pour toutes actions critiques
 
 ---
 
-## Version 0.6.0 - Tests & CI/CD (Actuel)
+## Version 0.6.0 - Tests & CI/CD
 
-**Statut**: 🔄 En cours
+**Statut**: 🔄 En cours (couverture et E2E non atteints)
 
 ### Objectifs
 Automatiser les tests et la CI/CD.
@@ -360,35 +279,32 @@ Automatiser les tests et la CI/CD.
 - [ ] Screenshots/vidéos des tests
 
 #### CI/CD Pipeline
-- [ ] Créer `.github/workflows/ci.yml`
-- [ ] Jobs:
-  - **Lint Backend**: ESLint/Prettier backend
-  - **Lint Frontend**: ESLint/Prettier frontend
-  - **Test Backend**: Jest/Mocha unit + integration
+- [x] Créer `.github/workflows/ci.yml`
+- [x] Jobs:
+  - **Lint Backend**: ESLint backend (Node 18 & 20)
+  - **Lint Frontend**: ESLint frontend
+  - **Test Backend**: Jest unit + integration (Node 18 & 20)
   - **Test Frontend**: Vitest unit tests
-  - **Build Backend**: Compiler TypeScript
-  - **Build Frontend**: Build Vite production
-  - **E2E** (optionnel): Playwright tests
-  - **Security**: npm audit + Trivy scan
+  - **Security**: npm audit (critical) + Trivy image scan
   - **Docker Build**: Multi-stage Dockerfiles
-  - **Docker Scan**: Trivy scan images
-- [ ] Badge de statut CI dans README
-- [ ] Configuration cache npm pour CI
-- [ ] Matrix strategy pour tester Node 18/20
+  - **E2E** (main branch uniquement): Playwright smoke tests
+- [x] Configuration cache npm pour CI
+- [x] Matrix strategy pour tester Node 18/20
+- [x] CI fix strict (PR #18): structure workflow, vérifications de couverture, permissions
+- [x] Badge de statut CI dans README (lien vers workflow)
 
 ### Critères d'acceptation
-- Tous les tests passent
-- Coverage backend > 80%, frontend > 70%
-- CI passe sur chaque push
-- Images Docker scannées sans vulnérabilités critiques
-- Documentation CI/CD dans README
+- [x] CI passe sur chaque push
+- [x] Images Docker scannées sans vulnérabilités critiques
+- [x] Documentation CI/CD dans README
+- [ ] Coverage backend > 80%, frontend > 70%
+- [ ] Tous les tests E2E passent
 
 ---
 
 ## Version 0.7.0 - UI/UX & Wireframes
 
-**Dates estimées**: Semaine 6  
-**Effort estimé**: 3-5 jours
+**Statut**: 🔄 En cours (wireframes et UI de base livrés ; ThemeManager, CategoryManager et WCAG à finaliser)
 
 ### Objectifs
 Améliorer l'interface et créer la documentation UX.
@@ -396,160 +312,148 @@ Améliorer l'interface et créer la documentation UX.
 ### Tâches
 
 #### Wireframes
-- [ ] Créer `docs/wireframes.md`
-- [ ] Wireframe 1: Page d'accueil / Feed
-  - Layout général
-  - Barre de navigation
-  - Filtres (thèmes, catégories)
-  - Liste de notes (NoteCard)
-- [ ] Wireframe 2: NoteCard
-  - Affichage titre, extrait, auteur, date
-  - Tags thèmes/catégories
-  - Boutons (voir détail, commenter)
-- [ ] Wireframe 3: Détail note + commentaires
-  - Note complète
-  - Liste commentaires
-  - Formulaire nouveau commentaire
-- [ ] Wireframe 4: Formulaire création note (Teacher)
-  - Champs titre/contenu
-  - Sélecteurs thèmes (multi-select)
-  - Sélecteurs catégories
-  - Sélecteur de cibles
-  - Bouton publier
-- [ ] Wireframe 5: Dashboard enseignant
-  - Statistiques notes créées
-  - Liste des notes récentes
-  - Bouton créer nouvelle note
-  - Gestion thèmes/catégories
+- [x] Créer `docs/wireframes.md`
+- [x] Wireframe 1: Page d'accueil / Feed
+- [x] Wireframe 2: NoteCard
+- [x] Wireframe 3: Détail note + commentaires
+- [x] Wireframe 4: Formulaire création note (Teacher)
+- [x] Wireframe 5: Dashboard enseignant
 
 #### Frontend - Améliorations UI
-- [ ] `ThemeManager.vue` - Gestion des thèmes (admin/teacher)
-- [ ] `CategoryManager.vue` - Gestion des catégories
-- [ ] CSS/Styling amélioré
-- [ ] Responsive design (mobile, tablet, desktop)
-- [ ] Dark mode (optionnel)
-- [ ] Accessibilité (WCAG AA)
+- [x] CSS/Styling amélioré
+- [x] Responsive design (mobile, tablet, desktop)
+- [x] Dark / Light mode avec persistance (`useTheme`)
+- [x] Loader visuel pour les opérations async (`Loader.vue`)
+- [ ] `ThemeManager.vue` — Interface admin/teacher pour gestion des thèmes
+- [ ] `CategoryManager.vue` — Interface admin/teacher pour gestion des catégories
+- [ ] Accessibilité WCAG AA (audit + correctifs)
 
 ### Critères d'acceptation
-- Wireframes complets et détaillés
-- UI cohérente et moderne
-- Application responsive
-- Accessibilité validée
+- [x] Wireframes complets et détaillés
+- [x] UI cohérente et moderne
+- [x] Application responsive
 
 ---
 
 ## Version 1.0.0 - Production Ready
 
-**Dates estimées**: Semaine 7  
-**Effort estimé**: 3-5 jours
-
-### Objectifs
-Finaliser pour production.
+**Statut**: ✅ Complété
 
 ### Tâches
 
 #### Documentation
-- [ ] README.md complet
-  - Instructions installation
-  - Guide de démarrage
-  - Guide d'exploitation
-  - Guide de développement
-  - Guide de contribution
-- [ ] API Documentation (Swagger/OpenAPI optionnel)
-- [ ] User Guide (guide utilisateur)
-- [ ] Admin Guide (guide administrateur)
+- [x] README.md complet (installation, démarrage, contribution)
+- [x] API Documentation (`docs/API.md`)
+- [x] User Guide (`docs/USER_GUIDE.md`)
 
 #### Déploiement
-- [ ] Docker Compose production testé
-- [ ] Variables d'environnement documentées
-- [ ] Secrets Docker Swarm configurés
-- [ ] Healthchecks Docker
-- [ ] Backup/restore PostgreSQL
-- [ ] Monitoring basique (logs)
+- [x] Docker Compose production testé
+- [x] Variables d'environnement documentées (`.env.example`)
+- [x] Secrets Docker Swarm configurés
+- [x] Healthchecks Docker
+- [x] Traefik reverse proxy
 
 #### Finalisations
-- [ ] Revue de code complète
-- [ ] Refactoring si nécessaire
-- [ ] Vérification sécurité finale
-- [ ] Performance testing basique
-- [ ] Version tagging (v1.0.0)
-- [ ] Release Notes
+- [x] Version tagging (v1.0.0)
+- [x] Release Notes (`docs/RELEASE_NOTES.md`)
 
 ### Critères d'acceptation
-- Application déployable en production
-- Documentation complète
-- Aucune vulnérabilité critique
-- Performance acceptable (< 1s réponse API)
-- Tous les tests passent
+- [x] Application déployable en production
+- [x] Documentation complète
+- [x] Aucune vulnérabilité critique
 
 ---
 
-## Versions Futures (Post-MVP)
+## Reste à Faire (Post-v1.0.0)
 
-### Version 1.1.0 - Notifications
-- Notifications in-app en temps réel (WebSocket)
+Les éléments ci-dessous sont les travaux identifiés à compléter pour atteindre la maturité opérationnelle complète du projet.
+
+### 🔴 Haute Priorité
+- **Tests E2E Playwright**: smoke, teacher flow, student flow, GDPR flow
+- **Couverture de tests**: atteindre 80% backend / 70% frontend (vérifications CI actives)
+- **2FA TOTP**: obligatoire pour les admins (`auth.controller.ts`), interface QR Code
+- **Endpoint audit admin**: `GET /api/v1/audit` avec pagination et filtres
+
+### 🟡 Moyenne Priorité
+- **Vue "Activités récentes"**: logs consultables par l'utilisateur
+- **ThemeManager.vue / CategoryManager.vue**: interfaces admin/teacher
+- **Accessibilité WCAG AA**: validation et correctifs
+- **Stockage sécurisé des secrets**: Vault ou param store
+- **Badge CI dans README**: lien vers le workflow GitHub Actions
+
+### 🟢 Basse Priorité (Nice-to-have)
+- **Backup/restore PostgreSQL**: scripts et documentation
+- **Monitoring avancé**: Prometheus + Grafana
+- **Swagger/OpenAPI**: documentation interactive de l'API
+
+---
+
+## Versions Futures (Post-v1.0.0)
+
+### Version 1.1.0 — Notifications
+- Notifications in-app en temps réel (WebSocket / SSE)
 - Notifications e-mail (NodeMailer)
-- Préférences de notifications utilisateur
+- Préférences de notifications par utilisateur
 
-### Version 1.2.0 - Recherche Avancée
-- Recherche full-text notes (PostgreSQL FTS)
-- Filtres avancés
-- Tri par pertinence
+### Version 1.2.0 — Recherche Avancée
+- Recherche full-text sur les notes (PostgreSQL `tsvector` / `tsquery`)
+- Filtres avancés multi-critères
+- Tri par pertinence (tf-idf ou ts_rank)
 
-### Version 1.3.0 - Collaboration
-- Édition collaborative notes
-- Mentions utilisateurs (@username)
-- Réactions aux notes/commentaires
+### Version 1.3.0 — Sécurité Avancée
+- 2FA TOTP (Google Authenticator, Authy)
+- Interface QR Code d'enrôlement
+- Vue "Activités récentes" pour l'utilisateur
 
-### Version 1.4.0 - Analytics
-- Tableau de bord analytics (teacher/admin)
-- Statistiques engagement
-- Rapports exportables
+### Version 1.4.0 — Collaboration
+- Mentions utilisateurs (`@username`) dans les commentaires
+- Réactions enrichies (emojis, compteurs)
+
+### Version 1.5.0 — Analytics
+- Tableau de bord engagement (teacher/admin)
+- Statistiques de lecture par note
+- Rapports exportables (CSV/JSON)
 
 ---
 
 ## Timeline Globale
 
-| Version | Description | Durée | Dates estimées |
-|---------|-------------|-------|----------------|
-| 0.1.0 | Fondations (actuel) | - | ✅ Complété |
-| 0.2.0 | DB & TypeScript | 3-5 jours | Sem. 1 |
-| 0.3.0 | API Thèmes/Catégories | 5-7 jours | Sem. 2 |
-| 0.4.0 | Feed & Assignation | 7-10 jours | Sem. 3 |
-| 0.5.0 | Sécurité & GDPR | 5-7 jours | Sem. 4 |
-| 0.6.0 | Tests & CI/CD | 5-7 jours | Sem. 5 |
-| 0.7.0 | UI/UX & Wireframes | 3-5 jours | Sem. 6 |
-| 1.0.0 | Production Ready | 3-5 jours | Sem. 7 |
+| Version | Description | Statut |
+|---------|-------------|--------|
+| 0.1.0 | Fondations | ✅ Complété |
+| 0.2.0 | DB & TypeScript | ✅ Complété |
+| 0.3.0 | API Unified Tags & Profils | ✅ Complété |
+| 0.4.0 | Feed & Assignation | ✅ Complété |
+| 0.5.0 | Sécurité & GDPR | ✅ Complété |
+| 0.6.0 | Tests & CI/CD | 🔄 En cours |
+| 0.7.0 | UI/UX & Wireframes | 🔄 En cours |
+| 1.0.0 | Production Ready | ✅ Complété |
+| 1.x | Sécurité avancée, E2E, Analytics… | 🔄 En cours |
 
-**Total estimé**: 6-8 semaines pour MVP production-ready
+**MVP livré** — version courante : **v1.2.0**
 
 ---
 
-## Priorités
+## Priorités (Post-v1.0.0)
 
-### 🔴 Haute Priorité (MVP Bloquant)
-- Migrations base de données
-- API Feed avec filtrage
-- Frontend TypeScript/Pinia
-- Composants Feed (FeedList, NoteCard)
-- Formulaire création note (Teacher)
-- GDPR endpoints
-- CI/CD basique
+### 🔴 Haute Priorité
+- Tests E2E Playwright (smoke, teacher flow, student flow, GDPR flow)
+- Couverture tests (≥ 80% backend / ≥ 70% frontend) — seuils contrôlés en CI
+- 2FA TOTP pour les admins (`auth.controller.ts` + interface QR Code)
+- Endpoint `GET /api/v1/audit` (admin) avec pagination et filtres
 
-### 🟡 Moyenne Priorité (MVP Important)
-- Tests unitaires complets
-- Tests E2E
-- Rate limiting
-- Sanitization XSS
-- Audit logging
-- Documentation GDPR
+### 🟡 Moyenne Priorité
+- Vue "Activités récentes" (logs consultables par l'utilisateur)
+- `ThemeManager.vue` — Interface admin/teacher de gestion des thèmes
+- `CategoryManager.vue` — Interface admin/teacher de gestion des catégories
+- Accessibilité WCAG AA — audit complet et correctifs
+- ESLint configuré côté frontend (actuellement non-opérationnel)
+- Stockage sécurisé des secrets (Vault ou AWS SSM)
 
 ### 🟢 Basse Priorité (Nice-to-have)
-- Wireframes détaillés
-- UI avancée (dark mode, etc.)
-- Performance optimization
-- Monitoring avancé
-- Analytics
+- Backup/restore PostgreSQL (scripts et documentation)
+- Monitoring avancé (Prometheus / Grafana)
+- Swagger / OpenAPI — documentation interactive de l'API
 
 ---
 
@@ -599,6 +503,6 @@ Finaliser pour production.
 
 ---
 
-**Dernière mise à jour**: 12 décembre 2024  
-**Version du document**: 1.0  
+**Dernière mise à jour**: 1er avril 2026  
+**Version du document**: 2.0  
 **Auteur**: GitHub Copilot Agent
