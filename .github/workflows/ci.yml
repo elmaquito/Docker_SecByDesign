@@ -328,13 +328,7 @@ jobs:
           docker compose -f infrastructure/docker-compose.security-test.yml --project-name ${{ github.job }}-${{ github.run_id }} up -d --build
       - name: Wait for WAF to be ready
         run: |
-          for i in $(seq 1 60); do
-            curl -sf http://localhost:8080/ && break
-            echo "Waiting for WAF... ($i/60)"
-            sleep 5
-          done
-          curl -sf http://localhost:8080/ || \
-            { echo "WAF failed to start"; docker compose -f infrastructure/docker-compose.security-test.yml --project-name ${{ github.job }}-${{ github.run_id }} logs; exit 1; }
+          docker compose -f infrastructure/docker-compose.security-test.yml --project-name ${{ github.job }}-${{ github.run_id }} wait waf || { echo "WAF failed to become healthy"; docker compose -f infrastructure/docker-compose.security-test.yml --project-name ${{ github.job }}-${{ github.run_id }} logs; exit 1; }
       - name: "Test XSS: <script> tag in query param blocked (expect HTTP 403)"
         run: |
           # %3Cscript%3Ealert%281%29%3C%2Fscript%3E = <script>alert(1)</script>
@@ -384,12 +378,7 @@ jobs:
           docker compose -f infrastructure/docker-compose.security-test.yml --project-name ${{ github.job }}-${{ github.run_id }} up -d --build
       - name: Wait for WAF to be ready
         run: |
-          for i in $(seq 1 60); do
-            curl -sf http://localhost:8080/ && break
-            sleep 5
-          done
-          curl -sf http://localhost:8080/ || \
-            { echo "WAF failed to start"; docker compose -f infrastructure/docker-compose.security-test.yml --project-name ${{ github.job }}-${{ github.run_id }} logs; exit 1; }
+          docker compose -f infrastructure/docker-compose.security-test.yml --project-name ${{ github.job }}-${{ github.run_id }} wait waf || { echo "WAF failed to become healthy"; docker compose -f infrastructure/docker-compose.security-test.yml --project-name ${{ github.job }}-${{ github.run_id }} logs; exit 1; }
       - name: "Verify WAF port 8080 is accessible (should be OPEN)"
         run: |
           STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/)
@@ -430,12 +419,7 @@ jobs:
           docker compose -f infrastructure/docker-compose.security-test.yml --project-name ${{ github.job }}-${{ github.run_id }} up -d --build
       - name: Wait for WAF to be ready
         run: |
-          for i in $(seq 1 60); do
-            curl -sf http://localhost:8080/ && break
-            sleep 5
-          done
-          curl -sf http://localhost:8080/ || \
-            { docker compose -f infrastructure/docker-compose.security-test.yml --project-name ${{ github.job }}-${{ github.run_id }} logs; exit 1; }
+          docker compose -f infrastructure/docker-compose.security-test.yml --project-name ${{ github.job }}-${{ github.run_id }} wait waf || { echo "WAF failed to become healthy"; docker compose -f infrastructure/docker-compose.security-test.yml --project-name ${{ github.job }}-${{ github.run_id }} logs; exit 1; }
       - name: "Verify /api/v1/notes requires authentication (expect 401)"
         run: |
           STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/api/v1/notes)
@@ -487,12 +471,7 @@ jobs:
           docker compose -f infrastructure/docker-compose.security-test.yml --project-name ${{ github.job }}-${{ github.run_id }} up -d --build
       - name: Wait for WAF to be ready
         run: |
-          for i in $(seq 1 60); do
-            curl -sf http://localhost:8080/ && break
-            sleep 5
-          done
-          curl -sf http://localhost:8080/ || \
-            { docker compose -f infrastructure/docker-compose.security-test.yml --project-name ${{ github.job }}-${{ github.run_id }} logs; exit 1; }
+          docker compose -f infrastructure/docker-compose.security-test.yml --project-name ${{ github.job }}-${{ github.run_id }} wait waf || { echo "WAF failed to become healthy"; docker compose -f infrastructure/docker-compose.security-test.yml --project-name ${{ github.job }}-${{ github.run_id }} logs; exit 1; }
       - name: "Run Ansible healthcheck playbook"
         run: |
           ansible-playbook \
@@ -525,12 +504,7 @@ jobs:
           docker compose -f infrastructure/docker-compose.security-test.yml --project-name ${{ github.job }}-${{ github.run_id }} up -d --build
       - name: Wait for WAF to be ready
         run: |
-          for i in $(seq 1 60); do
-            curl -sf http://localhost:8080/ && break
-            sleep 5
-          done
-          curl -sf http://localhost:8080/ || \
-            { docker compose -f infrastructure/docker-compose.security-test.yml --project-name ${{ github.job }}-${{ github.run_id }} logs; exit 1; }
+          docker compose -f infrastructure/docker-compose.security-test.yml --project-name ${{ github.job }}-${{ github.run_id }} wait waf || { echo "WAF failed to become healthy"; docker compose -f infrastructure/docker-compose.security-test.yml --project-name ${{ github.job }}-${{ github.run_id }} logs; exit 1; }
       - name: Generate failed authentication events (brute-force simulation)
         run: |
           for i in $(seq 1 5); do
@@ -576,12 +550,7 @@ jobs:
           docker compose -f infrastructure/docker-compose.security-test.yml --project-name ${{ github.job }}-${{ github.run_id }} up -d --build
       - name: Wait for WAF to be ready
         run: |
-          for i in $(seq 1 60); do
-            curl -sf http://localhost:8080/ && break
-            sleep 5
-          done
-          curl -sf http://localhost:8080/ || \
-            { docker compose -f infrastructure/docker-compose.security-test.yml --project-name ${{ github.job }}-${{ github.run_id }} logs; exit 1; }
+          docker compose -f infrastructure/docker-compose.security-test.yml --project-name ${{ github.job }}-${{ github.run_id }} wait waf || { echo "WAF failed to become healthy"; docker compose -f infrastructure/docker-compose.security-test.yml --project-name ${{ github.job }}-${{ github.run_id }} logs; exit 1; }
 
       # Fix: ensure ZAP has a writable working directory
       - name: Prepare ZAP working directory
