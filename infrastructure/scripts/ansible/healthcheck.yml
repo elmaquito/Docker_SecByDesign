@@ -1,0 +1,61 @@
+---
+# Roadmap Phase 6 – Ansible healthcheck playbook
+# Verifies that the NOTIMATIC security test stack is fully operational:
+#   - WAF proxies health check from backend successfully
+#   - Unauthenticated API access is rejected (401)
+#
+# Usage:
+#   ansible-playbook -i infrastructure/scripts/ansible/inventory.yml \
+#                    infrastructure/scripts/ansible/healthcheck.yml
+
+- name: NOTIMATIC Security Stack – Healthcheck
+  hosts: localhost
+  gather_facts: false
+  vars:
+    waf_url: "http://localhost:8080"
+
+  tasks:
+    - name: Wait for WAF/backend health endpoint to respond
+      uri:
+        url: "{{ waf_url }}/health"
+        method: GET
+        status_code: 200
+        timeout: 10
+      register: health_result
+      retries: 6
+      delay: 5
+      until: health_result.status == 200
+
+    - name: Print health response
+      debug:
+        msg: "Health check passed: {{ health_result.json }}"
+
+    - name: Verify unauthenticated access to /api/notes is rejected (401)
+      uri:
+        url: "{{ waf_url }}/api/notes"
+        method: GET
+        status_code: 401
+        timeout: 10
+      register: auth_check
+
+    - name: Confirm auth enforcement
+      assert:
+        that: auth_check.status == 401
+        success_msg: "✅ Auth enforcement OK – /api/notes returns 401 without credentials"
+        fail_msg: "❌ Auth not enforced – /api/notes returned {{ auth_check.status }}"
+
+    - name: Verify invalid Bearer token is rejected (401)
+      uri:
+        url: "{{ waf_url }}/api/notes"
+        method: GET
+        headers:
+          Authorization: "Bearer invalid.token.value"
+        status_code: 401
+        timeout: 10
+      register: bearer_check
+
+    - name: Confirm invalid token rejected
+      assert:
+        that: bearer_check.status == 401
+        success_msg: "✅ Invalid token rejected – HTTP 401"
+        fail_msg: "❌ Invalid token not rejected – got {{ bearer_check.status }}"

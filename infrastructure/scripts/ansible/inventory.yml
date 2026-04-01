@@ -1,0 +1,7 @@
+all:
+  hosts:
+    localhost:
+      ansible_connection: local
+  vars:
+    waf_url: "http://localhost:8080"
+    api_url: "http://localhost:8080"
