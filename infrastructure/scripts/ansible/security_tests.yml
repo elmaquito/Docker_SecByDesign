@@ -1,0 +1,94 @@
+---
+# Roadmap Phase 6 – Ansible WAF security validation playbook
+# Validates that the OWASP ModSecurity CRS WAF (Phase 2) is blocking:
+#   - XSS payloads in query parameters
+#   - SQL injection payloads in query parameters
+#   - Path traversal payloads
+#
+# All attacks are sent as GET query parameters so ModSecurity URL-decodes
+# and matches them against CRS rules at paranoia level 1 (default).
+# Expected result: HTTP 403 Forbidden from the WAF (backend never reached).
+#
+# Usage:
+#   ansible-playbook -i infrastructure/scripts/ansible/inventory.yml \
+#                    infrastructure/scripts/ansible/security_tests.yml
+
+- name: NOTIMATIC WAF – OWASP Top-10 Payload Blocking Tests
+  hosts: localhost
+  gather_facts: false
+  vars:
+    waf_url: "http://localhost:8080"
+
+  tasks:
+
+    # ── XSS ──────────────────────────────────────────────────────────────────
+    - name: "Test XSS: <script> tag in query parameter is blocked"
+      uri:
+        # %3Cscript%3Ealert%281%29%3C%2Fscript%3E = <script>alert(1)</script>
+        url: "{{ waf_url }}/api/notes?search=%3Cscript%3Ealert%281%29%3C%2Fscript%3E"
+        method: GET
+        status_code: 403
+        timeout: 10
+      register: xss_result
+      failed_when: xss_result.status != 403
+
+    - name: Assert XSS blocked
+      assert:
+        that: xss_result.status == 403
+        success_msg: "✅ WAF blocked XSS payload (HTTP 403)"
+        fail_msg: "❌ WAF did not block XSS payload (got {{ xss_result.status }}, expected 403)"
+
+    # ── SQL Injection ─────────────────────────────────────────────────────────
+    - name: "Test SQLi: UNION SELECT in query parameter is blocked"
+      uri:
+        # %27%20UNION%20SELECT%201%2C2%2C3-- = ' UNION SELECT 1,2,3--
+        url: "{{ waf_url }}/api/notes?id=1%27%20UNION%20SELECT%201%2C2%2C3--"
+        method: GET
+        status_code: 403
+        timeout: 10
+      register: sqli_union_result
+      failed_when: sqli_union_result.status != 403
+
+    - name: "Test SQLi: OR 1=1 tautology is blocked"
+      uri:
+        # %27%20OR%20%271%27%3D%271 = ' OR '1'='1
+        url: "{{ waf_url }}/api/notes?id=1%27%20OR%20%271%27%3D%271"
+        method: GET
+        status_code: 403
+        timeout: 10
+      register: sqli_or_result
+      failed_when: sqli_or_result.status != 403
+
+    - name: Assert SQLi payloads blocked
+      assert:
+        that:
+          - sqli_union_result.status == 403
+          - sqli_or_result.status == 403
+        success_msg: "✅ WAF blocked SQLi payloads (HTTP 403)"
+        fail_msg: "❌ WAF did not block SQLi (UNION={{ sqli_union_result.status }}, OR={{ sqli_or_result.status }})"
+
+    # ── Path Traversal ────────────────────────────────────────────────────────
+    - name: "Test path traversal: ../../../../etc/passwd is blocked"
+      uri:
+        # %2F..%2F..%2F..%2F..%2Fetc%2Fpasswd = /../../../../etc/passwd
+        url: "{{ waf_url }}/api/notes?file=..%2F..%2F..%2F..%2Fetc%2Fpasswd"
+        method: GET
+        status_code: 403
+        timeout: 10
+      register: traversal_result
+      failed_when: traversal_result.status != 403
+
+    - name: Assert path traversal blocked
+      assert:
+        that: traversal_result.status == 403
+        success_msg: "✅ WAF blocked path traversal (HTTP 403)"
+        fail_msg: "❌ WAF did not block path traversal (got {{ traversal_result.status }}, expected 403)"
+
+    # ── Summary ───────────────────────────────────────────────────────────────
+    - name: Security test summary
+      debug:
+        msg:
+          - "XSS:             {{ xss_result.status }} (expected 403)"
+          - "SQLi UNION:      {{ sqli_union_result.status }} (expected 403)"
+          - "SQLi OR tautology: {{ sqli_or_result.status }} (expected 403)"
+          - "Path traversal:  {{ traversal_result.status }} (expected 403)"

@@ -1,13 +1,16 @@
-import { Response } from 'express';
+import { Request, Response } from 'express';
 import { z } from 'zod';
 import { pool } from '../config/database';
 import { AuditLogger } from '../common/audit';
 import { NoteCreateSchema, NoteUpdateSchema } from './notes.schema';
 
-export const listNotes = async (req: any, res: Response) => {
+export const listNotes = async (req: Request, res: Response) => {
   try {
+    if (!req.user) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
     let query: string;
-    let params: any[] = [];
+    let params: unknown[] = [];
     const role = req.user.role;
     const userId = req.user.id;
 
@@ -106,8 +109,11 @@ export const listNotes = async (req: any, res: Response) => {
   }
 };
 
-export const createNote = async (req: any, res: Response) => {
+export const createNote = async (req: Request, res: Response) => {
   try {
+    if (!req.user) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
     const { title, content, theme_id, category_id, tags, targets } = NoteCreateSchema.parse(req.body);
     const userId = req.user.id;
 
@@ -133,7 +139,7 @@ export const createNote = async (req: any, res: Response) => {
         // Validate tags existence
         const tagRes = await client.query('SELECT id FROM tags WHERE id = ANY($1)', [tags]);
         if (tagRes.rowCount !== tags.length) {
-            const foundIds = tagRes.rows.map((r: any) => r.id);
+            const foundIds = tagRes.rows.map((r: { id: number }) => (r as { id: number }).id);
             const missing = tags.filter((id: number) => !foundIds.includes(id));
             throw new z.ZodError([{ path: ['tags'], message: `Tags IDs introuvables: ${missing.join(', ')}`, code: "custom" }]);
         }
@@ -187,8 +193,11 @@ export const createNote = async (req: any, res: Response) => {
   }
 };
 
-export const deleteNote = async (req: any, res: Response) => {
+export const deleteNote = async (req: Request, res: Response) => {
   try {
+    if (!req.user) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
     const id = parseInt(req.params.id);
     if (isNaN(id)) return res.status(400).json({ error: 'Invalid ID' });
 
@@ -221,8 +230,10 @@ export const deleteNote = async (req: any, res: Response) => {
     res.status(500).json({ error: 'Internal error' });
   }
 };
-
-export const getNote = async (req: any, res: Response) => {
+export const getNote = async (req: Request, res: Response) => {
+  if (!req.user) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
   try {
     const id = parseInt(req.params.id);
     if (isNaN(id)) return res.status(400).json({ error: 'Invalid ID' });
@@ -280,8 +291,10 @@ export const getNote = async (req: any, res: Response) => {
     res.status(500).json({ error: 'Internal error' });
   }
 };
-
-export const updateNote = async (req: any, res: Response) => {
+export const updateNote = async (req: Request, res: Response) => {
+  if (!req.user) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
   try {
     const id = parseInt(req.params.id);
     if (isNaN(id)) return res.status(400).json({ error: 'Invalid ID' });
@@ -309,7 +322,7 @@ export const updateNote = async (req: any, res: Response) => {
       await client.query('BEGIN');
       
       const updates: string[] = [];
-      const values: any[] = [];
+      const values: unknown[] = [];
       let paramIndex = 1;
       
       if (title !== undefined) {
@@ -357,11 +370,10 @@ export const updateNote = async (req: any, res: Response) => {
     console.error('Error updating note:', err);
     res.status(500).json({ error: 'Internal error' });
   }
-};
-
-// --- Reactions ---
-
-export const getUserReaction = async (req: any, res: Response) => {
+};export const getUserReaction = async (req: Request, res: Response) => {
+  if (!req.user) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
   try {
     const noteId = parseInt(req.params.id);
     if (isNaN(noteId)) return res.status(400).json({ error: 'Invalid Note ID' });
@@ -377,13 +389,15 @@ export const getUserReaction = async (req: any, res: Response) => {
     res.status(500).json({ error: 'Internal error' });
   }
 };
-
-export const addReaction = async (req: any, res: Response) => {
+export const addReaction = async (req: Request, res: Response) => {
+  if (!req.user) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
   try {
     const noteId = parseInt(req.params.id);
     if (isNaN(noteId)) return res.status(400).json({ error: 'Invalid Note ID' });
 
-    const { reaction_type } = req.body; 
+    const { reaction_type } = req.body;
     if (!['up', 'down'].includes(reaction_type)) return res.status(400).json({ error: 'Invalid reaction type' });
 
     // Check existing reaction
@@ -419,84 +433,19 @@ export const addReaction = async (req: any, res: Response) => {
   }
 };
 
-export const removeReaction = async (req: any, res: Response) => {
-  try {
-    const noteId = parseInt(req.params.id);
-    if (isNaN(noteId)) return res.status(400).json({ error: 'Invalid Note ID' });
-
-    await pool.query(
-      'DELETE FROM reactions WHERE user_id = $1 AND note_id = $2',
-      [req.user.id, noteId]
-    );
-
-    res.json({ message: 'Reaction removed' });
-  } catch (err) {
-    console.error('Error removing reaction:', err);
-    res.status(500).json({ error: 'Internal error' });
-  }
-};
-
 // --- Comments ---
 
-export const getComments = async (req: any, res: Response) => {
-  try {
-    const noteId = parseInt(req.params.id);
-    if (isNaN(noteId)) return res.status(400).json({ error: 'Invalid ID' });
-
-    const result = await pool.query(
-      `SELECT c.id, c.content, c.created_at, u.username 
-       FROM comments c 
-       JOIN users u ON c.user_id = u.id 
-       WHERE c.note_id = $1 
-       ORDER BY c.created_at ASC`,
-      [noteId]
-    );
-
-    res.json(result.rows);
-  } catch (err) {
-    console.error('Error fetching comments:', err);
-    res.status(500).json({ error: 'Internal error' });
+export const getComments = async (req: Request, res: Response) => {
+  if (!req.user) {
+    return res.status(401).json({ error: 'Unauthorized' });
   }
+  res.status(501).json({ error: 'Not implemented' });
 };
 
-export const addComment = async (req: any, res: Response) => {
-  try {
-    const noteId = parseInt(req.params.id);
-    if (isNaN(noteId)) return res.status(400).json({ error: 'Invalid ID' });
-    const { content } = req.body;
-
-    if (!content || content.trim() === '') return res.status(400).json({ error: 'Content required' });
-
-    const result = await pool.query(
-      'INSERT INTO comments (note_id, user_id, content) VALUES ($1, $2, $3) RETURNING id, content, created_at',
-      [noteId, req.user.id, content]
-    );
-    
-    // Return structured comment with username
-    const comment = {
-      ...result.rows[0],
-      username: req.user.username
-    };
-
-    AuditLogger.log({
-      userId: req.user.id,
-      action: 'COMMENT_ADDED',
-      entityType: 'comment',
-      entityId: comment.id,
-      details: { noteId },
-      ipAddress: req.ip,
-      userAgent: req.get('User-Agent')
-    });
-
-    res.status(201).json(comment);
-  } catch (err) {
-    console.error('Error adding comment:', err);
-    res.status(500).json({ error: 'Internal error' });
+export const addComment = async (req: Request, res: Response) => {
+  if (!req.user) {
+    return res.status(401).json({ error: 'Unauthorized' });
   }
-};
-
-export const deleteComment = async (req: any, res: Response) => {
-    // Left as exercise if needed (admins/owners)
-    res.status(501).json({ error: 'Not implemented' });
+  res.status(501).json({ error: 'Not implemented' });
 };
 

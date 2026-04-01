@@ -5,7 +5,7 @@ export interface AuditLogParams {
   action: string;
   entityType?: string;
   entityId?: number;
-  details?: any;
+  details?: unknown;
   ipAddress?: string;
   userAgent?: string;
 }

@@ -1,7 +1,14 @@
-import { Router, Request, Response } from 'express';
+import { Router, Request, Response, NextFunction } from 'express';
 import { Pool } from 'pg';
 
-export const createThemeRouter = (pool: Pool, authenticate: any, authorize: any) => {
+type AuthMiddleware = (req: Request, res: Response, next: NextFunction) => void;
+type AuthorizeMiddleware = (roles: string[]) => (req: Request, res: Response, next: NextFunction) => void;
+
+export const createThemeRouter = (
+  pool: Pool,
+  authenticate: AuthMiddleware,
+  authorize: AuthorizeMiddleware
+) => {
   const router = Router();
 
   router.get('/', authenticate, async (req: Request, res: Response) => {
@@ -19,7 +26,7 @@ export const createThemeRouter = (pool: Pool, authenticate: any, authorize: any)
       const { name, description, color } = req.body;
       const result = await pool.query(
         'INSERT INTO themes (name, description, color, created_by) VALUES ($1, $2, $3, $4) RETURNING *',
-        [name, description, color, (req as any).user.id]
+        [name, description, color, (req as Request & { user: { id: number } }).user.id]
       );
       res.status(201).json(result.rows[0]);
     } catch (err) {

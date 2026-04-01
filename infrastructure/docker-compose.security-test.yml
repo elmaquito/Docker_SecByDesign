@@ -1,0 +1,69 @@
+# infrastructure/docker-compose.security-test.yml
+services:
+  database:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: test_password
+      POSTGRES_DB: notimatic_test
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ../backend/init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - security-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U user -d notimatic_test"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ../backend
+      dockerfile: ../infrastructure/Dockerfile.backend
+    environment:
+      DB_HOST: database
+      DB_USER: user
+      DB_PASSWORD: test_password
+      DB_NAME: notimatic_test
+      JWT_SECRET: test_jwt_secret
+      REFRESH_TOKEN_SECRET: test_refresh_secret
+      # Ajout pour debug
+      DEBUG: "*"
+    depends_on:
+      database:
+        condition: service_healthy
+    networks:
+      - security-net
+    # Backend ne doit pas exposer de port directement (isolation)
+    expose:
+      - "3000"
+    healthcheck:
+      test: ["CMD", "/nodejs/bin/node", "-e", "require('http').get('http://localhost:3000/health', (r) => process.exit(r.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  waf:
+    image: nginx:alpine
+    ports:
+      - "8080:80"
+    volumes:
+      - ./config/nginx-waf.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - security-net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+networks:
+  security-net:
+    driver: bridge
+
+volumes:
+  postgres_data:

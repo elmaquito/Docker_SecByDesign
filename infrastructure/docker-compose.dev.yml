@@ -37,7 +37,7 @@ services:
       context: ../backend
       dockerfile: ../infrastructure/Dockerfile.backend
       target: builder
-    command: npm run start:dev
+    command: ["sh", "-c", "npm install && npm run start:dev"]
     volumes:
       - ../backend:/app
       - /app/node_modules
@@ -45,9 +45,26 @@ services:
       - "3001:3000" # Direct access for dev (3001 to avoid conflict with Obsidian)
     environment:
       - DB_HOST=database
+      - DB_USER=user
       - DB_PASSWORD=dev_secret_password
+      - DB_NAME=notimatic_dev
+      - DB_PORT=5432
+      - NODE_ENV=development
+      - JWT_SECRET=dev_jwt_secret_change_me
+      - REFRESH_TOKEN_SECRET=dev_refresh_secret_change_me
+      - PORT=3000
+      - CORS_ORIGINS=http://localhost:5173,http://127.0.0.1:5173
+    depends_on:
+      database:
+        condition: service_healthy
     networks:
       - net-dev
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:3000/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
     # labels:
     #   - "traefik.http.routers.api.rule=Host(`api.localhost`)"
 
@@ -63,6 +80,11 @@ services:
       - ../backend/init.sql:/docker-entrypoint-initdb.d/init.sql
     networks:
       - net-dev
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U user -d notimatic_dev"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
 networks:
   net-dev:

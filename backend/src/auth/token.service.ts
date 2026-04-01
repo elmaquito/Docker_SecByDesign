@@ -4,10 +4,12 @@ import { Pool } from 'pg';
 import { JWT_SECRET, REFRESH_TOKEN_SECRET } from '../config/env';
 import { pool } from '../config/database';
 
+import { Role } from '../common/types';
+
 export interface TokenPayload {
     id: number;
     username: string;
-    role: string;
+    role: Role;
 }
 
 export interface RefreshTokenData {

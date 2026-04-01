@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 
 # --- Stage 1: Builder ---
-FROM node:18-bullseye AS builder
+FROM node:20-bullseye AS builder
 
 WORKDIR /app
 
@@ -14,7 +14,7 @@ COPY package*.json ./
 
 # Install dependencies (using npm install for initial bootstrap as no lockfile exists yet)
 # In production with lockfile, use: RUN npm ci --ignore-scripts
-RUN npm install --build-from-source=argon2
+RUN npm install --build-from-source=argon2 || { echo "npm install failed"; cat /root/.npm/_logs/*-debug.log; exit 1; }
 
 # Copy source code
 COPY . .
@@ -25,7 +25,9 @@ RUN npm run build
 # --- Stage 2: Runner (Secure Production Image) ---
 # Use Distroless for minimal attack surface (no shell, no package manager)
 # Or Alpine if debugging is strictly necessary (but Distroless is safer)
-FROM gcr.io/distroless/nodejs18-debian11 AS runner
+# FROM gcr.io/distroless/nodejs20-debian11 AS runner
+FROM node:20-alpine AS runner
+RUN apk add --no-cache curl
 
 WORKDIR /app
 
@@ -37,15 +39,21 @@ COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/package*.json ./
 COPY --from=builder /app/node_modules ./node_modules
 
-# Run as non-root user (Distroless has a 'nonroot' user with ID 65532)
+# Pour éviter l'erreur de build sur la syntaxe shell, on copie simplement tous les .env existants
+COPY --from=builder /app/.env* ./
+
+# Run as non-root user
 USER 65532:65532
 
-# Healthcheck is tricky in Distroless (no curl/wget). 
-# Option 1: Use a small go healthcheck binary copied in.
-# Option 2: Use built-in node script.
-# Here we assume a simple node script check.js exists or we rely on orchestrator checks.
-# HEALTHCHECK --interval=30s --timeout=3s CMD ["/nodejs/bin/node", "healthcheck.js"]
+# Healthcheck
+HEALTHCHECK --interval=30s --timeout=3s CMD curl -sf http://localhost:3000/health || exit 1
 
 EXPOSE 3000
 
-CMD ["dist/main.js"]
+# Start the application
+CMD ["npm", "start"]
+
+EXPOSE 3000
+
+# Start the application
+CMD ["npm", "start"]

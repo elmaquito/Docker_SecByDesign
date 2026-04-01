@@ -1,32 +1,62 @@
-# NOTIMATIC — Roadmap Technique
+# Roadmap Sécurité & Infrastructure – Stack Sécurité (Nouvelle section)
 
-> **Document** : Roadmap et suivi d'avancement  
-> **Projet** : NOTIMATIC — Application de prise de notes sécurisée  
-> **Version du document** : 2.0  
-> **Dernière mise à jour** : 1er avril 2026  
-> **Auteur** : GitHub Copilot Agent
+## Phase 1 : Socle réseau et proxy (Jours 1-2)
+- Déploiement Traefik (reverse proxy) via Docker Compose
+- Déploiement du frontend et backend sur réseaux séparés
+- **Tests** :
+  - Vérification du routage HTTP/HTTPS (curl, navigateur)
+  - Tests automatisés de disponibilité (Ansible ping, healthchecks)
+- **Documentation** : Schéma réseau, variables d’environnement, secrets
 
----
+## Phase 2 : Ajout du WAF (Jours 2-3)
+- Déploiement d’un WAF (Nginx + ModSecurity ou openappsec) devant le backend
+- Configuration de règles de filtrage (patterns, payloads, headers)
+- **Tests** :
+  - Attaques XSS/SQLi simulées (OWASP ZAP, curl)
+  - Vérification du blocage/logging par le WAF
+- **Documentation** : Règles WAF, intégration avec Traefik
 
-## Sommaire
+## Phase 3 : Firewall réseau (Jours 3-4)
+- Déploiement d’un firewall (OPNSENSE en VM ou container)
+- Mise en place des règles de filtrage, port mirroring vers IDS
+- **Tests** :
+  - Scans de ports (nmap)
+  - Tentatives d’accès non autorisées
+  - Vérification du mirroring (paquets capturés par IDS)
+- **Documentation** : Règles FW, schéma de flux
 
-1. [Vue d'ensemble](#vue-densemble)
-2. [v0.1.0 — Fondations](#version-010---fondations-actuel)
-3. [v0.2.0 — Base de Données & TypeScript](#version-020---extensions-base-de-données--typescript)
-4. [v0.3.0 — API Unified Tags & Profils](#version-030---api-unified-tags--profils)
-5. [v0.4.0 — Feed Intelligent & Assignation](#version-040---feed-intelligent--assignation)
-6. [v0.5.0 — Sécurité & GDPR](#version-050---sécurité--gdpr)
-7. [v0.6.0 — Tests & CI/CD](#version-060---tests--cicd)
-8. [v0.7.0 — UI/UX & Wireframes](#version-070---uiux--wireframes)
-9. [v1.0.0 — Production Ready](#version-100---production-ready)
-10. [Reste à Faire (Post-v1.0.0)](#reste-à-faire-post-v100)
-11. [Versions Futures](#versions-futures-post-v100)
-12. [Timeline Globale](#timeline-globale)
-13. [Priorités](#priorités-post-v100)
-14. [Dépendances entre Versions](#dépendances-entre-versions)
-15. [Métriques de Succès](#métriques-de-succès)
+## Phase 4 : API Gateway & API Firewall (Jours 4-5)
+- Déploiement Wallarm API Firewall (ou équivalent)
+- Configuration des règles d’authentification, tokens, payloads
+- **Tests** :
+  - Appels API avec/ sans tokens, payloads malicieux
+  - Vérification du filtrage et des logs
+- **Documentation** : Mapping endpoints/API GW
 
----
+## Phase 5 : SIEM & IDS (Jours 5-6)
+- Déploiement OSSEC/Wazuh (SIEM/IDS) sur réseau dédié
+- Connexion du port mirroring FW → IDS
+- Collecte centralisée des logs (Traefik, WAF, API GW, backend)
+- **Tests** :
+  - Génération d’événements suspects (tentatives brute-force, accès interdits)
+  - Vérification de la détection/corrélation dans le SIEM
+- **Documentation** : Procédures de collecte, dashboard SIEM
+
+## Phase 6 : Automatisation & Validation (Jours 6-7)
+- Écriture de playbooks Ansible pour déploiement et tests automatisés
+- Automatisation des tests de sécurité (lint, vulnérabilités, E2E, attaques simulées)
+- **Tests** :
+  - Exécution complète du pipeline Ansible (déploiement + tests)
+  - CI/CD : Intégration des tests dans GitHub Actions
+- **Documentation** : Guide de déploiement, scripts/tests, .env exemple
+
+## Phase 7 : Documentation & Revue finale (Jour 7)
+- Rédaction de la documentation d’architecture, sécurité, correspondances outils/fonctions
+- Checklist de conformité (séparation réseau, gestion secrets, logs, port mirroring, etc.)
+- **Tests** :
+  - Revue croisée (peer review)
+  - Validation finale de la stack sur environnement cible
+# Roadmap NOTIMATIC - MVP Feed d'actualités
 
 ## Vue d'ensemble
 

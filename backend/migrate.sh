@@ -5,9 +5,15 @@
 
 set -e
 
-# Load environment variables
-if [ -f ../../.env ]; then
-    export $(cat ../../.env | grep -v '^#' | xargs)
+# Resolve script directory (works whether called from any CWD)
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+
+# Load environment variables from repo root .env if present
+if [ -f "$SCRIPT_DIR/../.env" ]; then
+    set -a
+    # shellcheck disable=SC1091
+    source "$SCRIPT_DIR/../.env"
+    set +a
 fi
 
 # Database configuration
@@ -20,7 +26,7 @@ DB_PASSWORD="${DB_PASSWORD:-dev_secret_password}"
 # Export password for psql
 export PGPASSWORD="$DB_PASSWORD"
 
-MIGRATIONS_DIR="$(dirname "$0")/../../backend/migrations"
+MIGRATIONS_DIR="$SCRIPT_DIR/migrations"
 MIGRATIONS_TABLE="schema_migrations"
 
 echo "🔧 NOTIMATIC Database Migration Runner"

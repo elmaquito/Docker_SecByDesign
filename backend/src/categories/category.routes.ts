@@ -1,7 +1,15 @@
 import { Router, Request, Response } from 'express';
 import { Pool } from 'pg';
 
-export const createCategoryRouter = (pool: Pool, authenticate: any, authorize: any) => {
+import { NextFunction } from 'express';
+type AuthMiddleware = (req: Request, res: Response, next: NextFunction) => void;
+type AuthorizeMiddleware = (roles: string[]) => (req: Request, res: Response, next: NextFunction) => void;
+
+export const createCategoryRouter = (
+  pool: Pool,
+  authenticate: AuthMiddleware,
+  authorize: AuthorizeMiddleware
+) => {
   const router = Router();
 
   router.get('/', authenticate, async (req: Request, res: Response) => {

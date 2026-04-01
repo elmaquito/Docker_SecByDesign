@@ -7,7 +7,9 @@
     "build": "vite build",
     "preview": "vite preview",
     "lint": "echo 'Linting not yet configured'",
-    "test": "vitest run"
+    "test": "vitest run",
+    "pretest:coverage": "node -e \"const fs=require('fs');const p='coverage';fs.rmSync(p,{recursive:true,force:true});\"",
+    "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
     "@types/node": "^25.4.0",

@@ -1,0 +1,2 @@
+Placez ici les règles CRS officielles (fichiers .conf du Core Rule Set OWASP).
+Pour un vrai déploiement, téléchargez https://github.com/coreruleset/coreruleset/releases et copiez les fichiers dans ce dossier.

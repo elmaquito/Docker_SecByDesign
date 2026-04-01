@@ -5,7 +5,7 @@ import { pool } from '../config/database';
 import { AuditLogger } from '../common/audit';
 import { userCreateSchema, accountUpdateSchema, profileUpdateSchema } from './user.schema';
 
-export const createUser = async (req: any, res: Response) => {
+export const createUser = async (req: Request, res: Response) => {
   try {
     const { username, password, role } = userCreateSchema.parse(req.body);
     const hash = await argon2.hash(password, { type: argon2.argon2id });
@@ -31,8 +31,11 @@ export const listUsers = async (req: Request, res: Response) => {
   }
 };
 
-export const getAccount = async (req: any, res: Response) => {
+export const getAccount = async (req: Request, res: Response) => {
   try {
+    if (!req.user) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
     const result = await pool.query(
       'SELECT id, username, email, phone, role, created_at FROM users WHERE id = $1',
       [req.user.id]
@@ -49,8 +52,11 @@ export const getAccount = async (req: any, res: Response) => {
   }
 };
 
-export const updateAccount = async (req: any, res: Response) => {
+export const updateAccount = async (req: Request, res: Response) => {
   try {
+    if (!req.user) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
     // Students cannot edit their account
     if (req.user.role === 'student') {
       return res.status(403).json({ error: 'Students cannot edit their account information' });
@@ -61,7 +67,7 @@ export const updateAccount = async (req: any, res: Response) => {
     
     // Build update query dynamically
     const updates: string[] = [];
-    const values: any[] = [];
+    const values: unknown[] = [];
     let paramIndex = 1;
     
     if (email !== undefined) {
@@ -124,9 +130,12 @@ export const setupAdmin = async (req: Request, res: Response) => {
 };
 
 
-export const exportData = async (req: any, res: Response) => {
+export const exportData = async (req: Request, res: Response) => {
   const userId = parseInt(req.params.id);
   
+  if (!req.user) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
   if (req.user.id !== userId && req.user.role !== 'admin') {
     return res.status(403).json({ error: 'Forbidden' });
   }
@@ -163,7 +172,10 @@ export const exportData = async (req: any, res: Response) => {
   }
 };
 
-export const deleteUser = async (req: any, res: Response) => {
+export const deleteUser = async (req: Request, res: Response) => {
+  if (!req.user) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
   const userId = parseInt(req.params.id);
 
   if (req.user.id !== userId && req.user.role !== 'admin') {
@@ -190,7 +202,7 @@ export const deleteUser = async (req: any, res: Response) => {
   }
 };
 
-export const listProfiles = async (req: any, res: Response) => {
+export const listProfiles = async (req: Request, res: Response) => {
   try {
     const result = await pool.query(`
       SELECT p.*, u.username, u.role 
@@ -203,7 +215,7 @@ export const listProfiles = async (req: any, res: Response) => {
   }
 };
 
-export const getUserProfile = async (req: any, res: Response) => {
+export const getUserProfile = async (req: Request, res: Response) => {
   const userId = parseInt(req.params.id);
 
   try {
@@ -236,7 +248,10 @@ export const getUserProfile = async (req: any, res: Response) => {
   }
 };
 
-export const updateUserProfile = async (req: any, res: Response) => {
+export const updateUserProfile = async (req: Request, res: Response) => {
+  if (!req.user) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
   const userId = parseInt(req.params.id);
 
   // Security check: Only admin or the user themselves can edit

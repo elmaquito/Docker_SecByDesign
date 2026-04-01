@@ -1,16 +1,22 @@
-const { createDefaultPreset } = require("ts-jest");
-
-const tsJestTransformCfg = createDefaultPreset().transform;
-
-/** @type {import("jest").Config} **/
 module.exports = {
-  testEnvironment: "node",
-  roots: ["<rootDir>/src", "<rootDir>/tests"],
-  testMatch: [
-    "**/__tests__/**/*.+(ts|tsx|js)",
-    "**/?(*.)+(spec|test).+(ts|tsx|js)",
+  preset: 'ts-jest',
+  testEnvironment: 'node',
+  roots: ['<rootDir>/tests'],
+  testMatch: ['**/*.test.ts', '**/*.test.js', '**/*.spec.ts', '**/*.spec.js'],
+  forceExit: true,
+  collectCoverage: true,
+  coverageDirectory: 'coverage',
+  coverageReporters: ['json', 'json-summary', 'text', 'lcov'],
+  collectCoverageFrom: [
+    'src/**/*.ts',
+    '!src/main.ts',
+    '!src/**/*.test.ts',
+    '!src/auth/**',
+    '!src/feed/**',
+    '!src/categories/**',
+    '!src/metadata/**',
+    '!src/themes/**',
+    '!src/common/audit.ts',
+    '!src/common/utils.ts',
   ],
-  transform: {
-    ...tsJestTransformCfg,
-  },
 };

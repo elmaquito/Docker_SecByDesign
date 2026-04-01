@@ -1,1 +1,0 @@
-test('user', () => expect(1).toBe(1));
